@@ -1,0 +1,13 @@
+# Cryptogen configuration for ManufacturerOrg (Org1)
+# Represents the manufacturer stakeholder in the supply chain
+
+PeerOrgs:
+  - Name: manufacturer
+    Domain: manufacturer.shipment.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 1

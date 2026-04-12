@@ -1,0 +1,27 @@
+# Go
+chaincode/shipment/vendor/
+
+# Fabric network artifacts
+network/organizations/peerOrganizations/
+network/organizations/ordererOrganizations/
+network/organizations/fabric-ca/
+network/channel-artifacts/
+network/log.txt
+network/*.tar.gz
+
+# Node.js client
+client/node_modules/
+client/wallet/
+
+# OS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
