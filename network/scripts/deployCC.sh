@@ -1,7 +1,3 @@
-#!/bin/bash
-#
-# Deploy Chaincode Script
-# Packages, installs, approves, and commits chaincode to the channel.
 
 CHANNEL_NAME=${1:-"shipchannel"}
 CC_NAME=${2:-"shipment"}
@@ -18,14 +14,10 @@ VERBOSE=${12:-false}
 
 FABRIC_CFG_PATH=${PWD}/configtx
 
-# Import utility functions
 . scripts/envVar.sh
 
 println() { echo -e "$1"; }
 
-# ============================================================
-# Package chaincode
-# ============================================================
 packageChaincode() {
   println "Packaging chaincode '${CC_NAME}'..."
 
@@ -46,9 +38,6 @@ packageChaincode() {
   println "Chaincode packaged: ${CC_NAME}.tar.gz"
 }
 
-# ============================================================
-# Install chaincode on a peer
-# ============================================================
 installChaincode() {
   ORG=$1
   setGlobals $ORG
@@ -69,9 +58,6 @@ installChaincode() {
   println "Chaincode installed on org${ORG} peer"
 }
 
-# ============================================================
-# Query installed chaincode to get package ID
-# ============================================================
 queryInstalled() {
   ORG=$1
   setGlobals $ORG
@@ -91,9 +77,6 @@ queryInstalled() {
   println "Package ID: ${PACKAGE_ID}"
 }
 
-# ============================================================
-# Approve chaincode for an organization
-# ============================================================
 approveForMyOrg() {
   ORG=$1
   setGlobals $ORG
@@ -126,9 +109,6 @@ approveForMyOrg() {
   println "Chaincode approved for org${ORG}"
 }
 
-# ============================================================
-# Check commit readiness
-# ============================================================
 checkCommitReadiness() {
   ORG=$1
   setGlobals $ORG
@@ -157,13 +137,9 @@ checkCommitReadiness() {
   done
 }
 
-# ============================================================
-# Commit chaincode
-# ============================================================
 commitChaincodeDefinition() {
   println "Committing chaincode definition to channel..."
 
-  # Get peer connection params for all orgs
   PEER_CONN_PARMS=""
 
   setGlobals 1
@@ -200,9 +176,6 @@ commitChaincodeDefinition() {
   println "Chaincode committed to channel"
 }
 
-# ============================================================
-# Query committed chaincode
-# ============================================================
 queryCommitted() {
   ORG=$1
   setGlobals $ORG
@@ -225,9 +198,6 @@ queryCommitted() {
   done
 }
 
-# ============================================================
-# Initialize chaincode (invoke InitLedger)
-# ============================================================
 chaincodeInvokeInit() {
   println "Invoking chaincode init function '${CC_INIT_FCN}'..."
 
@@ -259,11 +229,7 @@ chaincodeInvokeInit() {
   println "Chaincode initialization complete"
 }
 
-# ============================================================
-# Main execution
-# ============================================================
 
-# Determine if init is required
 if [ -n "$CC_INIT_FCN" ] && [ "$CC_INIT_FCN" != "NA" ]; then
   INIT_REQUIRED="--init-required"
 fi
@@ -278,32 +244,24 @@ println "Sequence:   ${CC_SEQUENCE}"
 println "Init Func:  ${CC_INIT_FCN}"
 println "========================================"
 
-# Step 1: Package
 packageChaincode
 
-# Step 2: Install on both orgs
 installChaincode 1
 installChaincode 2
 
-# Step 3: Query installed to get Package ID
 queryInstalled 1
 
-# Step 4: Approve for both orgs
 approveForMyOrg 1
 approveForMyOrg 2
 
-# Step 5: Check commit readiness
 checkCommitReadiness 1
 checkCommitReadiness 2
 
-# Step 6: Commit chaincode definition
 commitChaincodeDefinition
 
-# Step 7: Query committed
 queryCommitted 1
 queryCommitted 2
 
-# Step 8: Invoke init (if required)
 if [ -n "$CC_INIT_FCN" ] && [ "$CC_INIT_FCN" != "NA" ]; then
   chaincodeInvokeInit
 fi
