@@ -1,13 +1,10 @@
 # Hyperledger Fabric Test Network for Shipment Tracking
-# This docker-compose file defines 5 organizations (one per stakeholder role),
-# an orderer, and CouchDB state databases.
-#
 # Organizations:
-#   - ManufacturerOrg (Org1) — Creates shipments
-#   - TransporterOrg  (Org2) — Moves shipments between locations
-#   - WarehouseOrg    (Org3) — Stores shipments in warehouse
-#   - RetailerOrg     (Org4) — Receives shipments for retail
-#   - RecipientOrg    (Org5) — Final delivery recipient
+#   ManufacturerOrg (Org1) — Creates shipments
+#   TransporterOrg  (Org2) — Moves shipments between locations
+#   WarehouseOrg    (Org3) — Stores shipments in warehouse
+#   RetailerOrg     (Org4) — Receives shipments for retail
+#   RecipientOrg    (Org5) — Final delivery recipient
 
 version: '3.7'
 
@@ -21,9 +18,7 @@ networks:
     name: shipment_network
 
 services:
-  # ============================================================
   # Orderer
-  # ============================================================
   orderer.shipment.com:
     container_name: orderer.shipment.com
     image: hyperledger/fabric-orderer:2.5
@@ -60,9 +55,7 @@ services:
     networks:
       - shipment
 
-  # ============================================================
   # Manufacturer Peer (Org1)
-  # ============================================================
   couchdb0:
     container_name: couchdb0
     image: couchdb:3.3
@@ -114,9 +107,7 @@ services:
     networks:
       - shipment
 
-  # ============================================================
   # Transporter Peer (Org2)
-  # ============================================================
   couchdb1:
     container_name: couchdb1
     image: couchdb:3.3
@@ -168,9 +159,7 @@ services:
     networks:
       - shipment
 
-  # ============================================================
   # CLI for chaincode management
-  # ============================================================
   cli:
     container_name: cli
     image: hyperledger/fabric-tools:2.5
