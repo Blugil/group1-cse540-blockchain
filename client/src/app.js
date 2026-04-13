@@ -1,9 +1,5 @@
 /*
- * Shipment Tracking Client Application
- * ======================================
- * Express.js REST API that interacts with the Hyperledger Fabric network
- * to manage shipments through the full supply chain lifecycle.
- *
+ * Shipment Tracking Client Application: Express.js REST API that interacts with the Hyperledger Fabric network to manage shipments through the full supply chain lifecycle.
  * CSE 540 – Spring B 2026 | Group 1
  */
 
@@ -21,9 +17,6 @@ const PORT = process.env.PORT || 3000;
 const CHANNEL_NAME = 'shipchannel';
 const CHAINCODE_NAME = 'shipment';
 
-// ============================================================
-// Connection profile path
-// ============================================================
 const ccpPath = path.resolve(
   __dirname,
   '..',
@@ -35,9 +28,6 @@ const ccpPath = path.resolve(
   'connection-manufacturer.json'
 );
 
-// ============================================================
-// Helper: Connect to the Fabric gateway
-// ============================================================
 async function connectToGateway(userId = 'appUser') {
   const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
   const walletPath = path.join(__dirname, '..', 'wallet');
@@ -63,16 +53,10 @@ async function connectToGateway(userId = 'appUser') {
   return { gateway, contract };
 }
 
-// ============================================================
-// REST API Endpoints
-// ============================================================
-
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', service: 'Shipment Tracking API', timestamp: new Date().toISOString() });
 });
 
-// POST /api/shipments — Create a new shipment
 app.post('/api/shipments', async (req, res) => {
   try {
     const { shipmentID, origin, destination, participants, offChainData } = req.body;
@@ -99,7 +83,6 @@ app.post('/api/shipments', async (req, res) => {
   }
 });
 
-// GET /api/shipments/:id — Get shipment details
 app.get('/api/shipments/:id', async (req, res) => {
   try {
     const { gateway, contract } = await connectToGateway();
@@ -112,7 +95,6 @@ app.get('/api/shipments/:id', async (req, res) => {
   }
 });
 
-// GET /api/shipments — Get all shipments
 app.get('/api/shipments', async (req, res) => {
   try {
     const { gateway, contract } = await connectToGateway();
@@ -125,7 +107,6 @@ app.get('/api/shipments', async (req, res) => {
   }
 });
 
-// PUT /api/shipments/:id/status — Update shipment status
 app.put('/api/shipments/:id/status', async (req, res) => {
   try {
     const { status, location, notes } = req.body;
@@ -150,7 +131,6 @@ app.put('/api/shipments/:id/status', async (req, res) => {
   }
 });
 
-// PUT /api/shipments/:id/transfer — Transfer custody
 app.put('/api/shipments/:id/transfer', async (req, res) => {
   try {
     const { newHolder } = req.body;
@@ -169,7 +149,6 @@ app.put('/api/shipments/:id/transfer', async (req, res) => {
   }
 });
 
-// GET /api/shipments/:id/verify — Verify shipment data integrity
 app.get('/api/shipments/:id/verify', async (req, res) => {
   try {
     const { offChainData } = req.query;
@@ -188,7 +167,6 @@ app.get('/api/shipments/:id/verify', async (req, res) => {
   }
 });
 
-// GET /api/shipments/:id/history — Get shipment event history
 app.get('/api/shipments/:id/history', async (req, res) => {
   try {
     const { gateway, contract } = await connectToGateway();
@@ -201,7 +179,6 @@ app.get('/api/shipments/:id/history', async (req, res) => {
   }
 });
 
-// POST /api/shipments/:id/participants — Authorize a participant
 app.post('/api/shipments/:id/participants', async (req, res) => {
   try {
     const { participant } = req.body;
@@ -220,7 +197,6 @@ app.post('/api/shipments/:id/participants', async (req, res) => {
   }
 });
 
-// DELETE /api/shipments/:id/participants/:participant — Revoke a participant
 app.delete('/api/shipments/:id/participants/:participant', async (req, res) => {
   try {
     const { gateway, contract } = await connectToGateway();
@@ -233,9 +209,6 @@ app.delete('/api/shipments/:id/participants/:participant', async (req, res) => {
   }
 });
 
-// ============================================================
-// Start server
-// ============================================================
 app.listen(PORT, () => {
   console.log(`\n========================================`);
   console.log(`  Shipment Tracking API`);
