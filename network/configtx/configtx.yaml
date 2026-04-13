@@ -1,10 +1,3 @@
-# Channel configuration for the Shipment Tracking Network
-# Defines organizations, orderer, and channel policies.
-#
-# Two peer organizations are used for the test network:
-#   ManufacturerOrg (Org1) and TransporterOrg (Org2).
-# Additional organizations (Warehouse, Retailer, Recipient) can be added
-# by extending this file with more org definitions.
 
 Organizations:
   - &OrdererOrg
