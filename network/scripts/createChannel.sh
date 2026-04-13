@@ -1,7 +1,3 @@
-#!/bin/bash
-#
-# Create Channel Script
-# Creates the application channel and joins both peers to it.
 
 CHANNEL_NAME=${1:-"shipchannel"}
 DELAY=${2:-3}
@@ -10,12 +6,8 @@ VERBOSE=${4:-false}
 
 FABRIC_CFG_PATH=${PWD}/configtx
 
-# import utility functions
 . scripts/envVar.sh
 
-# ============================================================
-# Create the channel genesis block
-# ============================================================
 createChannelGenesisBlock() {
   echo "Generating channel genesis block '${CHANNEL_NAME}.block'..."
   set -x
@@ -28,9 +20,6 @@ createChannelGenesisBlock() {
   fi
 }
 
-# ============================================================
-# Create channel on orderer using osnadmin
-# ============================================================
 createChannel() {
   echo "Creating channel ${CHANNEL_NAME}..."
 
@@ -59,9 +48,6 @@ createChannel() {
   fi
 }
 
-# ============================================================
-# Join a peer to the channel
-# ============================================================
 joinChannel() {
   ORG=$1
   setGlobals $ORG
@@ -86,37 +72,25 @@ joinChannel() {
   fi
 }
 
-# ============================================================
-# Set anchor peers
-# ============================================================
 setAnchorPeer() {
   ORG=$1
   echo "Setting anchor peer for ${ORG}..."
   docker exec cli ./scripts/setAnchorPeer.sh $ORG $CHANNEL_NAME
 }
 
-# ============================================================
-# Main execution
-# ============================================================
-
-# Create channel artifacts directory
 mkdir -p channel-artifacts
 
-# Generate genesis block
 createChannelGenesisBlock
 
-# Create channel
 ORDERER_CA="${PWD}/organizations/ordererOrganizations/shipment.com/tlsca/tlsca.shipment.com-cert.pem"
 ORDERER_ADMIN_TLS_SIGN_CERT="${PWD}/organizations/ordererOrganizations/shipment.com/orderers/orderer.shipment.com/tls/server.crt"
 ORDERER_ADMIN_TLS_PRIVATE_KEY="${PWD}/organizations/ordererOrganizations/shipment.com/orderers/orderer.shipment.com/tls/server.key"
 
 createChannel
 
-# Join ManufacturerOrg peer to channel
 echo "Joining ManufacturerOrg peer to channel..."
 joinChannel 1
 
-# Join TransporterOrg peer to channel
 echo "Joining TransporterOrg peer to channel..."
 joinChannel 2
 
