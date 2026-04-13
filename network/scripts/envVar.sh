@@ -1,10 +1,3 @@
-#!/bin/bash
-#
-# Environment variable helpers
-# Sets peer-specific environment variables for Fabric CLI commands.
-
-# Set globals for a given organization number
-# 1 = ManufacturerOrg, 2 = TransporterOrg
 setGlobals() {
   local USING_ORG=$1
 
@@ -30,7 +23,6 @@ setGlobals() {
   fi
 }
 
-# Set globals based on org name string
 setGlobalsByOrgName() {
   local ORG_NAME=$1
 
@@ -48,7 +40,6 @@ setGlobalsByOrgName() {
   esac
 }
 
-# Verify that the result from a peer command is as expected
 verifyResult() {
   if [ $1 -ne 0 ]; then
     echo "$2"
