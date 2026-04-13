@@ -1,12 +1,8 @@
-#!/bin/bash
-#
 # Test Chaincode via Peer CLI
 # ============================
 # This script demonstrates the full shipment lifecycle by invoking
 # chaincode functions directly via the Fabric peer CLI.
-#
 # Prerequisites: Network must be running and chaincode must be deployed.
-#
 # CSE 540 – Spring B 2026 | Group 1
 
 set -e
