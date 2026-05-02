@@ -557,6 +557,107 @@ func TestGetAllShipments(t *testing.T) {
 	t.Logf("✅ All 3 shipments exist on ledger")
 }
 
+func TestRegisterDevice(t *testing.T) {
+	stub := setupMockStub(t)
+
+	stub.MockInvoke("tx1", [][]byte{
+		[]byte("CreateShipment"),
+		[]byte("SHIP-DEVICE"),
+		[]byte("Origin"), []byte("Destination"),
+		[]byte(`["ManufacturerMSP"]`), []byte("data"),
+	})
+
+	result := stub.MockInvoke("tx2", [][]byte{
+		[]byte("RegisterDevice"),
+		[]byte("SHIP-DEVICE"),
+		[]byte("sensor-001"),
+		[]byte("temperature-sensor"),
+	})
+	if result.Status != 200 {
+		t.Fatalf("RegisterDevice failed: %s", result.Message)
+	}
+	t.Log("✅ Device registered successfully")
+
+	result = stub.MockInvoke("tx3", [][]byte{
+		[]byte("RegisterDevice"),
+		[]byte("SHIP-DEVICE"),
+		[]byte("sensor-001"),
+		[]byte("temperature-sensor"),
+	})
+	if result.Status == 200 {
+		t.Fatal("Expected duplicate device registration to fail")
+	}
+	t.Logf("✅ Duplicate device registration correctly rejected: %s", result.Message)
+}
+
+func TestRecordTelemetryWithDevice(t *testing.T) {
+	stub := setupMockStub(t)
+
+	stub.MockInvoke("tx1", [][]byte{
+		[]byte("CreateShipment"),
+		[]byte("SHIP-TELEM"),
+		[]byte("Origin"), []byte("Destination"),
+		[]byte(`["ManufacturerMSP"]`), []byte("data"),
+	})
+
+	// Telemetry without registered device must fail
+	result := stub.MockInvoke("tx2", [][]byte{
+		[]byte("RecordTelemetry"),
+		[]byte("SHIP-TELEM"),
+		[]byte("unregistered-sensor"),
+		[]byte("temperature"),
+		[]byte("22.5"), []byte("C"), []byte("Warehouse"),
+	})
+	if result.Status == 200 {
+		t.Fatal("Expected telemetry from unregistered device to fail")
+	}
+	t.Logf("✅ Unregistered device correctly rejected: %s", result.Message)
+
+	// Register the device, then telemetry must succeed
+	stub.MockInvoke("tx3", [][]byte{
+		[]byte("RegisterDevice"),
+		[]byte("SHIP-TELEM"),
+		[]byte("temp-sensor-1"),
+		[]byte("temperature-sensor"),
+	})
+
+	result = stub.MockInvoke("tx4", [][]byte{
+		[]byte("RecordTelemetry"),
+		[]byte("SHIP-TELEM"),
+		[]byte("temp-sensor-1"),
+		[]byte("temperature"),
+		[]byte("22.5"), []byte("C"), []byte("Warehouse"),
+	})
+	if result.Status != 200 {
+		t.Fatalf("RecordTelemetry from registered device failed: %s", result.Message)
+	}
+	t.Log("✅ Telemetry from registered device accepted")
+}
+
+func TestRecordDocument(t *testing.T) {
+	stub := setupMockStub(t)
+
+	stub.MockInvoke("tx1", [][]byte{
+		[]byte("CreateShipment"),
+		[]byte("SHIP-DOC"),
+		[]byte("Origin"), []byte("Destination"),
+		[]byte(`["ManufacturerMSP"]`), []byte("cert-data"),
+	})
+
+	result := stub.MockInvoke("tx2", [][]byte{
+		[]byte("RecordDocument"),
+		[]byte("SHIP-DOC"),
+		[]byte("QmXyz123abc"),
+		[]byte(computeHash("cert-data")),
+		[]byte("inspection-certificate"),
+		[]byte("Third-party quality inspection report"),
+	})
+	if result.Status != 200 {
+		t.Fatalf("RecordDocument failed: %s", result.Message)
+	}
+	t.Log("✅ IPFS document reference recorded on-chain")
+}
+
 func TestComputeHash(t *testing.T) {
 	data := "weight:25kg,volume:1cbm"
 	hash1 := computeHash(data)

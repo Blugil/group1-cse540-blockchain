@@ -887,7 +887,7 @@ The blockchain approach trades simplicity and raw performance for **trust, trans
 | Limitation | Description | Possible Future Improvement |
 |------------|-------------|----------------------------|
 | **Two organizations only** | Our network currently has Manufacturer and Transporter peers. Warehouse, Retailer, and Recipient exist as MSP identities but don't have their own dedicated peer nodes. | Add peer nodes for all five stakeholders. |
-| **No GUI / Frontend** | Interaction is through REST API or CLI — no visual dashboard. | Build a React/Next.js web dashboard. |
+| **No IPFS integration** | Off-chain data hashing is implemented, but there is no actual off-chain storage system. | Integrate IPFS for decentralized file storage. |
 | **Single orderer** | One Raft orderer — no crash fault tolerance in this demo. | Deploy 3 or 5 orderers for production. |
 | **No IPFS integration** | Off-chain data hashing is implemented, but we don't have an actual off-chain storage system. | Integrate IPFS for decentralized file storage. |
 | **No pagination** | `GetAllShipments()` returns everything at once — not scalable for millions of records. | Add bookmark-based pagination. |
@@ -949,7 +949,7 @@ While our system demonstrates a fully functional end-to-end blockchain shipment 
 | **Private data collections (PDC)** | Use Fabric's PDC feature to allow selective data sharing — e.g., pricing visible only to Manufacturer + Transporter | High |
 | **IPFS integration** | Store documents, images, and certificates on IPFS; store only the IPFS content hash on-chain | High |
 | **Multi-orderer Raft cluster** | Deploy 3 or 5 orderer nodes for crash fault tolerance in production | High |
-| **React/Next.js web dashboard** | Visual UI showing shipment map, status timeline, and custody chain for non-technical stakeholders | Medium |
+| **Shipment map view** | Extend the existing dashboard with a visual map showing real-time GPS location of shipments in transit | Medium |
 | **IoT sensor integration** | Accept real-time temperature, humidity, and GPS telemetry from IoT devices as signed status updates | Medium |
 | **CouchDB pagination** | Implement bookmark-based pagination in `GetAllShipments()` for scalability beyond 100,000 records | Medium |
 | **Cross-channel interoperability** | Use Fabric's inter-channel communication or a relay bridge to connect separate supply chain networks | Low |

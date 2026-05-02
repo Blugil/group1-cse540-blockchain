@@ -1,58 +1,41 @@
 'use strict';
 /*
- * importCryptoIdentity.js
- * Imports the cryptogen-generated Admin identity into the wallet.
- * Use this when the network was started with cryptogen (not Fabric CA).
+ * Imports the cryptogen-generated Admin and User1 identities from the Fabric test-network
+ * into the local wallet. Run this once after the network is up before starting the API.
  */
 
 const { Wallets } = require('fabric-network');
 const fs = require('fs');
 const path = require('path');
+const { org1Path } = require('./fabricConfig');
 
 async function main() {
   const walletPath = path.join(__dirname, '..', 'wallet');
   const wallet = await Wallets.newFileSystemWallet(walletPath);
   console.log(`Wallet path: ${walletPath}`);
 
-  const testNetPath = path.resolve(
-    '/Users/anushreebhure/fabric-install/fabric-samples/test-network',
-    'organizations', 'peerOrganizations', 'org1.example.com'
-  );
+  const adminKeyDir  = path.join(org1Path, 'users', 'Admin@org1.example.com', 'msp', 'keystore');
+  const adminCertDir = path.join(org1Path, 'users', 'Admin@org1.example.com', 'msp', 'signcerts');
+  const adminKey  = fs.readFileSync(path.join(adminKeyDir,  fs.readdirSync(adminKeyDir)[0]),  'utf8');
+  const adminCert = fs.readFileSync(path.join(adminCertDir, fs.readdirSync(adminCertDir)[0]), 'utf8');
 
-  // Import Admin
-  const adminKeyDir = path.join(testNetPath, 'users', 'Admin@org1.example.com', 'msp', 'keystore');
-  const adminCertDir = path.join(testNetPath, 'users', 'Admin@org1.example.com', 'msp', 'signcerts');
-
-  const adminKeyFile = fs.readdirSync(adminKeyDir)[0];
-  const adminCertFile = fs.readdirSync(adminCertDir)[0];
-
-  const adminKey = fs.readFileSync(path.join(adminKeyDir, adminKeyFile), 'utf8');
-  const adminCert = fs.readFileSync(path.join(adminCertDir, adminCertFile), 'utf8');
-
-  const adminIdentity = {
+  await wallet.put('admin', {
     credentials: { certificate: adminCert, privateKey: adminKey },
     mspId: 'Org1MSP',
     type: 'X.509',
-  };
-  await wallet.put('admin', adminIdentity);
+  });
   console.log('Imported Admin@org1.example.com as "admin"');
 
-  // Import User1 as appUser
-  const userKeyDir = path.join(testNetPath, 'users', 'User1@org1.example.com', 'msp', 'keystore');
-  const userCertDir = path.join(testNetPath, 'users', 'User1@org1.example.com', 'msp', 'signcerts');
+  const userKeyDir  = path.join(org1Path, 'users', 'User1@org1.example.com', 'msp', 'keystore');
+  const userCertDir = path.join(org1Path, 'users', 'User1@org1.example.com', 'msp', 'signcerts');
+  const userKey  = fs.readFileSync(path.join(userKeyDir,  fs.readdirSync(userKeyDir)[0]),  'utf8');
+  const userCert = fs.readFileSync(path.join(userCertDir, fs.readdirSync(userCertDir)[0]), 'utf8');
 
-  const userKeyFile = fs.readdirSync(userKeyDir)[0];
-  const userCertFile = fs.readdirSync(userCertDir)[0];
-
-  const userKey = fs.readFileSync(path.join(userKeyDir, userKeyFile), 'utf8');
-  const userCert = fs.readFileSync(path.join(userCertDir, userCertFile), 'utf8');
-
-  const appUserIdentity = {
+  await wallet.put('appUser', {
     credentials: { certificate: userCert, privateKey: userKey },
     mspId: 'Org1MSP',
     type: 'X.509',
-  };
-  await wallet.put('appUser', appUserIdentity);
+  });
   console.log('Imported User1@org1.example.com as "appUser"');
 }
 

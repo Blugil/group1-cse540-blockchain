@@ -1,18 +1,6 @@
 /*
- * Test Workflow Script
- * ====================
- * Demonstrates the full shipment lifecycle by invoking
- * chaincode functions in sequence via the Fabric SDK.
- *
- * Workflow:
- *   1. Initialize the ledger
- *   2. Query the sample shipment (SHIP-001)
- *   3. Create a new shipment (SHIP-TEST-001)
- *   4. Update shipment status to InTransit
- *   5. Transfer custody to TransporterMSP
- *   6. Verify shipment data integrity
- *   7. Query shipment history
- *   8. Get all shipments
+ * Runs through the main shipment flows end to end:
+ * create → update status → transfer custody → verify → check history.
  */
 
 'use strict';
@@ -20,6 +8,7 @@
 const { Gateway, Wallets } = require('fabric-network');
 const path = require('path');
 const fs = require('fs');
+const { ccpPath } = require('./fabricConfig');
 
 const CHANNEL_NAME = 'shipchannel';
 const CHAINCODE_NAME = 'shipment';
@@ -28,20 +17,7 @@ async function main() {
   let gateway;
 
   try {
-    // Load connection profile
-    const ccpPath = path.resolve(
-      __dirname,
-      '..',
-      '..',
-      'network',
-      'organizations',
-      'peerOrganizations',
-      'manufacturer.shipment.com',
-      'connection-manufacturer.json'
-    );
     const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
-
-    // Load wallet
     const walletPath = path.join(__dirname, '..', 'wallet');
     const wallet = await Wallets.newFileSystemWallet(walletPath);
 

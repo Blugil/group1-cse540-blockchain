@@ -1,1558 +1,426 @@
-% ============================================================
-% Blockchain-Based Shipment Tracking System — Technical Report
-% CSE 540 – Engineering Blockchain Applications
-% Arizona State University | Spring B 2026 | Group 1
-%
-% IEEE 2-column format, ~8 pages
-% Compile with: pdflatex REPORT.tex (run twice for references)
-% ============================================================
-
 \documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
 
-% ── Packages ──
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{lmodern}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
+\usepackage{textcomp}
 \usepackage{xcolor}
-\usepackage{tikz}
-\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit,
-                matrix, backgrounds, shadows, decorations.pathreplacing}
-\usepackage{pgfplots}
-\pgfplotsset{compat=1.18}
-\usepackage{enumitem}
-\usepackage{booktabs}
-\usepackage{tabularx}
-\usepackage{hyperref}
-\usepackage{listings}
-\usepackage{amssymb}
-\usepackage{pifont}
-\usepackage{float}
-\usepackage{caption}
-\usepackage{amsmath}
-\usepackage{balance}
 \usepackage{url}
-\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{hyperref}
 
-% ── Colors ──
-\definecolor{fabricblue}{RGB}{41,98,255}
-\definecolor{darkgreen}{RGB}{0,128,0}
-\definecolor{codebg}{RGB}{245,245,245}
-\definecolor{asumaroon}{RGB}{140,28,19}
-\definecolor{asugold}{RGB}{255,198,39}
-\definecolor{nodeblue}{RGB}{173,216,230}
-\definecolor{nodeorange}{RGB}{255,220,177}
-\definecolor{nodegreen}{RGB}{198,239,206}
-\definecolor{nodepurple}{RGB}{220,198,239}
-\definecolor{nodegray}{RGB}{230,230,230}
-\definecolor{nodered}{RGB}{255,199,206}
-
-% ── Hyperlinks ──
-\hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=fabricblue}
-
-% ── Code Listings ──
-\lstdefinelanguage{Golang}{
-  morekeywords={func,type,struct,interface,package,import,return,if,else,
-                for,range,var,const,map,make,append,len,nil,true,false,
-                string,int,bool,error,byte,fmt},
-  sensitive=true,
-  morecomment=[l]{//},
-  morecomment=[s]{/*}{*/},
-  morestring=[b]",
-}
 \lstset{
-  language=Golang,
   basicstyle=\ttfamily\scriptsize,
-  backgroundcolor=\color{codebg},
-  frame=single,
-  rulecolor=\color{gray!40},
   breaklines=true,
-  showstringspaces=false,
-  keywordstyle=\color{fabricblue}\bfseries,
-  commentstyle=\color{darkgreen}\itshape,
-  stringstyle=\color{asumaroon},
-  numberstyle=\tiny\color{gray},
-  numbers=left,
-  xleftmargin=1.2em,
-  framexleftmargin=1.2em,
+  frame=single,
+  captionpos=b,
+  xleftmargin=2mm,
+  xrightmargin=2mm
 }
 
-\newcommand{\cmark}{\ding{51}}
-\newcommand{\xmark}{\ding{55}}
-
-% ════════════════════════════════════════════════════════════════
 \begin{document}
 
-% ── Title ──
-\title{Blockchain-Based Shipment Tracking System:\\
-A Hyperledger Fabric Approach to Supply Chain Provenance}
+\title{Blockchain-Based Supply Chain Provenance System}
 
 \author{
-  \IEEEauthorblockN{Dominick Agnello, Ritish Abrol, Vatsal Patel,
-                    Shashikant Nanda, Anushree Bhure}
-  \IEEEauthorblockA{
-    CSE 540 -- Engineering Blockchain Applications\\
-    Ira A. Fulton Schools of Engineering, Arizona State University\\
-    Spring B 2026 -- Group 1\\
-    \url{https://github.com/Blugil/group1-cse540-blockchain}
-  }
+\IEEEauthorblockN{Dominick Agnello, Ritish Abrol, Vatsal Patel, Shashikant Nanda, Anushree Bhure}
+\IEEEauthorblockA{Arizona State University, Tempe, AZ, USA \\
+CSE 540 -- Engineering Blockchain Applications, Spring B 2026}
 }
 
 \maketitle
 
-% ════════════════════════════════════════════════════════════════
-%  ABSTRACT
-% ════════════════════════════════════════════════════════════════
 \begin{abstract}
-Modern supply chains suffer from fragmented record-keeping, opacity, and
-deep trust deficits among participating organizations. Each
-entity---manufacturer, transporter, warehouse, retailer---maintains its own
-isolated database, creating conditions for fraud, undetected tampering, and
-unresolvable disputes. This paper presents the design, implementation, and
-evaluation of a blockchain-based shipment tracking system built on
-Hyperledger Fabric 2.5. The system provides an immutable, cryptographically
-signed shared ledger that records every custody transfer, status update, and
-participant authorization across the supply chain lifecycle. Our smart
-contract, implemented in Go (647 lines, 10 public functions), enforces
-role-based access control (RBAC) via Membership Service Provider (MSP)
-identities, maintains off-chain data integrity through SHA-256 hashing, and
-captures a full tamper-evident audit trail using Fabric composite keys. A
-three-layer architecture couples a Node.js REST API with a two-organization
-Fabric network operating Raft consensus and CouchDB world state. The system
-is rigorously validated through 15 unit tests using Fabric's
-\texttt{shimtest.MockStub} framework augmented with self-signed X.509
-certificate injection. Results confirm correctness across all access-control
-scenarios, custody transitions, integrity verification, and terminal-state
-immutability, with all tests completing in under 0.5 seconds. A quantitative
-comparison against both public blockchain (Ethereum) and centralized database
-alternatives demonstrates that the solution achieves cryptographic
-auditability and trustless provenance at enterprise-grade throughput
-(2,000--3,500 TPS) with negligible per-transaction cost.
+Modern supply chains suffer from siloed, mutable records that enable fraud,
+disputes, and untraceable losses.  We present a blockchain-based shipment
+tracking system built on Hyperledger Fabric 2.5 that provides an immutable,
+shared chain-of-custody ledger across multiple organizations.  The smart
+contract, written in Go, implements eleven chaincode functions covering the
+full shipment lifecycle --- from creation through final delivery --- with
+role-based access control (RBAC), a storage-agnostic SHA-256 off-chain data
+integrity bridge, and simulated IoT telemetry recording.  The system is
+deployed as a two-organization Fabric network with Raft consensus, CouchDB
+state storage, a Node.js/Express REST API, and a browser-based dashboard.
+All 15 unit tests pass.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Hyperledger Fabric, supply chain management, blockchain, smart contract,
-provenance, shipment tracking, RBAC, SHA-256, Raft consensus, composite keys
+Hyperledger Fabric, supply chain provenance, smart contracts, RBAC,
+SHA-256, off-chain storage, IoT telemetry
 \end{IEEEkeywords}
 
-% ════════════════════════════════════════════════════════════════
-%  I. INTRODUCTION
-% ════════════════════════════════════════════════════════════════
 \section{Introduction}
 
-Global supply chains involve dozens of independent organizations transferring
-goods across jurisdictions, regulatory environments, and information silos.
-Manufacturers, freight forwarders, customs brokers, warehouse operators,
-retailers, and end recipients each maintain proprietary record systems that
-are rarely interoperable. When a shipment is lost, damaged, counterfeited, or
-disputed, no single authoritative record exists to reconstruct the chain of
-custody. The World Economic Forum estimates that eliminating supply chain
-information barriers could increase global trade by nearly 15\% and reduce
-administrative costs by up to 80\% in certain sectors~\cite{shakhbulatov2020}.
+Supply chain fraud and counterfeit goods cost the global economy an
+estimated \$4.5 trillion annually \cite{shakhbulatov2020}.  The structural
+cause is that each organization maintains its own private database, producing
+a fragmented record system where custody disputes are resolved by subjective
+negotiation rather than verifiable evidence.
 
-High-profile incidents amplify the urgency: the 2013 horse-meat scandal in
-Europe exposed how multiple tiers of subcontractors could obscure product
-origins~\cite{gonczol2020}; the COVID-19 pandemic revealed that vaccine cold
-chains lacked real-time integrity monitoring; and pharmaceutical counterfeiting
-causes an estimated \$200 billion in annual losses globally~\cite{wang2019}.
-These failures share a common root cause---the absence of a shared, immutable
-record of truth that all participants can independently verify.
+Hyperledger Fabric, a permissioned enterprise blockchain maintained by the
+Linux Foundation, addresses this by providing a shared, append-only ledger
+that all parties can write to but none can alter retroactively.  Its
+MSP-based identity model, Raft consensus, and CouchDB integration make it
+well suited to enterprise supply chain applications without cryptocurrency
+or gas fees.
 
-Blockchain technology offers a principled solution by providing an
-append-only, cryptographically linked ledger that no single party controls.
-However, public blockchains such as Ethereum are unsuitable for enterprise
-supply chains: they expose sensitive commercial data publicly, impose
-significant gas fees (\$0.50--\$50+ per transaction), and achieve only
-$\sim$30 TPS---insufficient for high-volume logistics~\cite{oguz2024}.
-Hyperledger Fabric~\cite{fabricdocs}, a permissioned blockchain framework
-maintained by the Linux Foundation, addresses all three limitations through
-its channel-based privacy model, PKI-rooted identity management via MSPs,
-modular pluggable Raft consensus, and a chaincode execution model capable
-of thousands of TPS.
+This paper presents a fully deployed Fabric 2.5 shipment tracking system
+with on-chain smart contract logic, simulated IoT telemetry, a REST API,
+and an interactive browser dashboard.  The system tracks shipments across
+five stakeholder roles, recording every custody transfer, status update, and
+sensor reading as an immutable, digitally signed event.
 
-Fig.~\ref{fig:highlevel} presents the core insight of our work: replacing
-disconnected organizational databases with a unified Fabric-backed ledger
-that every authorized participant reads and writes under cryptographic
-identity enforcement.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  actor/.style={rectangle, draw=black, rounded corners=3pt, fill=#1,
-                minimum width=1.1cm, minimum height=0.55cm,
-                font=\tiny\bfseries, align=center},
-  arr/.style={-{Stealth[length=2mm]}, thick},
-  dbarr/.style={-{Stealth[length=2mm]}, thick, dashed, gray},
-  lbl/.style={font=\tiny, align=center},
-]
-  \node[lbl, text=asumaroon] at (0,2.2) {\textbf{Traditional: Siloed Databases}};
-  \node[actor=nodered]   (mfg) at (-1.5,1.6) {Mfg\\DB};
-  \node[actor=nodeorange](trp) at (-0.3,1.6) {Trp\\DB};
-  \node[actor=nodegreen] (whs) at (0.9,1.6)  {Whs\\DB};
-  \node[actor=nodepurple](ret) at (2.1,1.6)  {Ret\\DB};
-  \draw[dbarr](mfg)--(trp); \draw[dbarr](trp)--(whs); \draw[dbarr](whs)--(ret);
-  \node[lbl, text=red!70!black] at (0.3,1.1)
-    {No shared truth --- disputes, fraud, data gaps};
-  \draw[thick, gray!40] (-2.2,0.75) -- (2.8,0.75);
-  \node[lbl, text=darkgreen] at (0.3,0.45)
-    {\textbf{Our System: Shared Blockchain Ledger}};
-  \node[actor=nodeblue]   (m2) at (-1.7,-0.3) {Mfg};
-  \node[actor=nodeorange] (t2) at (-0.5,-0.3) {Trp};
-  \node[actor=nodegreen]  (w2) at (0.7,-0.3)  {Whs};
-  \node[actor=nodepurple] (r2) at (1.9,-0.3)  {Ret};
-  \node[rectangle, draw=asumaroon, fill=asumaroon!10, rounded corners=3pt,
-        minimum width=4cm, minimum height=0.55cm, font=\tiny\bfseries]
-        (bc) at (0.1,-1.2) {Hyperledger Fabric --- Shared Ledger};
-  \foreach \n in {m2,t2,w2,r2}
-    \draw[arr, fabricblue] (\n) -- (bc);
-  \node[lbl, text=darkgreen] at (0.1,-1.85)
-    {Immutable, cryptographically verified provenance};
-\end{tikzpicture}
-\caption{High-level concept: siloed databases vs.\ shared blockchain ledger.}
-\label{fig:highlevel}
-\end{figure}
-
-\textbf{Our contributions are fourfold:}
-\begin{enumerate}[nosep, leftmargin=*]
-  \item A fully implemented Go chaincode (647 lines, 10 functions) with
-        MSP-rooted RBAC, SHA-256 off-chain integrity verification,
-        composite-key event history, and terminal-state immutability.
-  \item A three-layer system architecture: Node.js REST API, a
-        two-organization Fabric 2.5 network with Raft consensus and CouchDB,
-        and a Fabric CA identity layer.
-  \item A 15-test suite using MockStub with custom X.509 identity injection,
-        validating all business rules and edge cases.
-  \item A quantitative multi-axis comparison of our blockchain solution
-        against Ethereum and traditional centralized databases.
-\end{enumerate}
-
-The remainder of this paper is organized as follows. Section~II reviews
-related work. Section~III presents the technical architecture. Section~IV
-details the implementation. Section~V reports test results. Section~VI
-provides quantitative analysis. Sections~VII--IX address innovation,
-challenges, and future work. Section~X concludes.
-
-% ════════════════════════════════════════════════════════════════
-%  II. PRIOR WORK
-% ════════════════════════════════════════════════════════════════
 \section{Prior Work}
 
-\subsection{Blockchain in Supply Chain --- Surveys}
-
-Shakhbulatov et al.~\cite{shakhbulatov2020} conduct a comprehensive survey
-of blockchain applications in supply chain management, cataloguing 47 projects
-across food, pharmaceutical, and manufacturing domains. They find that
-immutability and decentralized trust are the primary motivations, and conclude
-that permissioned platforms are preferred for enterprise deployments due to
-their access control and throughput characteristics. Their taxonomy
-distinguishes \textit{provenance tracking} systems (our focus) from
-\textit{smart contracting} for automated payment settlement.
-
-Oguz et al.~\cite{oguz2024} systematically review 148 peer-reviewed studies
-published between 2015 and 2023. Their analysis shows that Hyperledger Fabric
-is used in 42\% of permissioned supply chain implementations, followed by
-Ethereum (31\%) and Hyperledger Besu (12\%). They identify scalability,
-interoperability with legacy ERP systems, and regulatory compliance as the top
-three open challenges---all of which our design directly addresses through
-Raft consensus, a REST API abstraction layer, and off-chain GDPR-compliant
-data partitioning.
-
-\subsection{Hybrid On-Chain / Off-Chain Architectures}
-
-Gonczol et al.~\cite{gonczol2020} evaluate 23 Fabric-based supply chain
-implementations and strongly recommend hybrid architectures in which only
-metadata and cryptographic digests are stored on-chain while bulk data resides
-in external storage. They demonstrate that storing raw payloads on-chain
-inflates ledger size by 10--50$\times$ and degrades throughput by up to 60\%.
-Our design adopts this pattern: the ledger stores only shipment metadata and
-a SHA-256 digest; all weight, volume, contents, and pricing data remain in
-an off-chain database, while the hash provides the cryptographic integrity
-bridge between the two storage tiers.
-
-\subsection{Food and Pharmaceutical Traceability}
-
-Wang et al.~\cite{wang2019} propose a Fabric-based food traceability system
-integrating IoT sensor data. Unlike their architecture, which uses
-organization-level access policies and does not enforce per-shipment RBAC,
-our system grants and revokes participant rights at the chaincode level on a
-per-shipment basis. This enables dynamic authorization---for instance, adding
-an insurance auditor mid-transit without reconfiguring network policies.
-
-Tian~\cite{tian2017} proposes an RFID-enabled food supply chain on public
-Ethereum. The public visibility and gas costs make that approach infeasible
-for sensitive commercial logistics; our permissioned Fabric deployment
-resolves both concerns.
-
-\subsection{Identity and Access Control on Blockchain}
-
-Maesa et al.~\cite{maesa2019} survey identity management on blockchain
-platforms and highlight the gap between wallet-based pseudonymous identity
-(Ethereum) and certificate-based real-world identity (Fabric). Our system
-exploits Fabric's X.509 MSP framework to extract the caller's
-\texttt{MSPID} at transaction time, enabling organizational-level RBAC without
-any additional identity oracle or off-chain lookup.
-
-Kshetri~\cite{kshetri2018} provides an economic analysis of blockchain
-adoption in supply chains, quantifying the value of dispute resolution and
-counterfeit prevention. Our cost comparison in Section~VI draws on this
-framing to demonstrate the economic case for permissioned blockchain over
-centralized alternatives.
-
-\subsection{Positioning of Our Work}
-
-Relative to the reviewed literature, our contribution is distinguished by:
-(i)~chaincode-level per-shipment RBAC enforced via MSP IDs at runtime;
-(ii)~composite-key event history enabling $O(\log n + k)$ range queries
-without full ledger scans;
-(iii)~a terminal-state immutability guarantee enforced at the smart contract
-layer rather than the application layer; and
-(iv)~a complete, reproducible test suite that validates all rules without
-requiring a live Fabric network.
-
-% ════════════════════════════════════════════════════════════════
-%  III. TECHNICAL ARCHITECTURE
-% ════════════════════════════════════════════════════════════════
-\section{Technical Architecture}
-
-\subsection{Three-Layer System Architecture}
-
-Our system is organized into three horizontal layers, each with a clearly
-defined responsibility boundary (Fig.~\ref{fig:architecture}).
-
-\textbf{Layer 1 --- Client Application:} A Node.js/Express REST server
-exposes 10 HTTP endpoints. It handles request validation, translates REST
-semantics to Fabric SDK calls, manages wallet-based identity persistence,
-and returns JSON responses. This layer is stateless and can be scaled
-horizontally behind a load balancer with no ledger-state affinity.
-
-\textbf{Layer 2 --- Blockchain Network:} A two-organization Hyperledger
-Fabric 2.5 network consisting of one peer per organization (ManufacturerMSP
-and TransporterMSP), a single Raft ordering service, and a shared
-\texttt{shipment-channel}. Each peer maintains a CouchDB world state
-database, enabling rich JSON queries and index-based lookups. The chaincode
-package is deployed to both peers and must be endorsed by both organizations
-before a transaction is ordered, enforcing the AND endorsement policy.
-
-\textbf{Layer 3 --- Identity and Security:} Three Fabric Certificate
-Authorities (one per organization plus the orderer org) issue X.509
-certificates to all network participants. MSP configurations define which
-certificate roots are trusted per organization. RBAC logic within the
-chaincode reads the caller's serialized identity at runtime to enforce
-per-function access policies without any off-chain lookup.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  box/.style={rectangle, draw=black, rounded corners=3pt, fill=#1,
-              minimum width=\columnwidth*0.88, minimum height=0.72cm,
-              font=\scriptsize\bfseries, align=center},
-  arr/.style={-{Stealth[length=2.5mm]}, thick, gray!70},
-]
-  \node[box=nodeblue] (l1) at (0,0)
-    {Layer 1 --- Client Application\\[2pt]
-     \scriptsize Node.js + Express \ $|$ \ 10 REST Endpoints \ $|$ \ Fabric SDK v2};
-  \node[box=nodegreen] (l2) at (0,-1.4)
-    {Layer 2 --- Blockchain Network\\[2pt]
-     \scriptsize Fabric 2.5 \ $|$ \ 2 Peers \ $|$ \ Raft Orderer \ $|$ \ CouchDB World State};
-  \node[box=nodeorange] (l3) at (0,-2.8)
-    {Layer 3 --- Identity \& Security\\[2pt]
-     \scriptsize Fabric CA $\times$3 \ $|$ \ X.509 Certs \ $|$ \ MSP Roots \ $|$ \ RBAC};
-  \draw[arr] (l1) -- node[right, font=\tiny]{Fabric SDK / gRPC} (l2);
-  \draw[arr] (l2) -- node[right, font=\tiny]{X.509 / MSP Enrollment} (l3);
-\end{tikzpicture}
-\caption{Three-layer system architecture with inter-layer communication.}
-\label{fig:architecture}
-\end{figure}
-
-\subsection{Fabric Network Topology}
-
-Fig.~\ref{fig:topology} details the Fabric network components. Both peers
-anchor the same \texttt{shipment-channel} and maintain independent CouchDB
-instances for world state, ensuring organizational data sovereignty while
-sharing the channel ledger. The Raft orderer provides crash-fault-tolerant
-(CFT) ordering; scaling to three or five orderer nodes yields production-grade
-fault tolerance. Each CA issues enrollment and TLS certificates to the peers,
-orderer, and admin identities within its organization.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  node/.style={rectangle, draw=gray, fill=white, rounded corners=2pt,
-               font=\tiny, align=center, minimum width=1.5cm,
-               minimum height=0.44cm},
-  ca/.style={rectangle, draw=orange!80!black, fill=orange!10, rounded corners=2pt,
-             font=\tiny\bfseries, align=center, minimum width=1.3cm,
-             minimum height=0.44cm},
-  arr/.style={-{Stealth[length=1.8mm]}, thick, gray!60},
-  chan/.style={rectangle, draw=asumaroon, fill=asumaroon!8, rounded corners=2pt,
-               font=\tiny\bfseries, minimum width=5.4cm, minimum height=0.48cm,
-               align=center},
-]
-  \node[chan] (ch) at (0,0) {shipment-channel (shared ledger)};
-  \node[node, fill=nodeblue!50]  (p0)  at (-2.4, 1.15) {Peer0\\ManufacturerMSP};
-  \node[node, fill=nodeblue!20]  (db0) at (-2.4, 0.48) {CouchDB0};
-  \node[ca]                      (ca0) at (-2.4,-0.65)  {CA\\Manufacturer};
-  \node[node, fill=nodegreen!60] (p1)  at ( 2.4, 1.15)  {Peer0\\TransporterMSP};
-  \node[node, fill=nodegreen!20] (db1) at ( 2.4, 0.48)  {CouchDB1};
-  \node[ca]                      (ca1) at ( 2.4,-0.65)  {CA\\Transporter};
-  \node[node, fill=nodeorange!60](ord) at ( 0,   1.7)   {Orderer (Raft)};
-  \node[ca]                      (cao) at ( 0,  -0.65)  {CA\\Orderer};
-  \node[rectangle, draw=fabricblue, fill=fabricblue!10, rounded corners=2pt,
-        font=\tiny\bfseries, minimum width=2.4cm, minimum height=0.44cm]
-        (cc) at (0,0.82) {Chaincode (Go)};
-  \draw[arr](p0)--(ch); \draw[arr](p1)--(ch); \draw[arr](ord)--(ch);
-  \draw[arr](p0)--(db0); \draw[arr](p1)--(db1);
-  \draw[arr,orange!70](ca0)--(p0); \draw[arr,orange!70](ca1)--(p1);
-  \draw[arr,orange!70](cao)--(ord);
-  \draw[arr,fabricblue!80](cc)--(ch);
-\end{tikzpicture}
-\caption{Hyperledger Fabric network topology (two orgs, Raft orderer).}
-\label{fig:topology}
-\end{figure}
-
-\subsection{Transaction Flow (Execute-Order-Validate)}
-
-Fabric's Execute-Order-Validate (EOV) model differs fundamentally from
-Ethereum's serial execution. Fig.~\ref{fig:txflow} illustrates the five-phase
-pipeline.
-
-\textbf{Phase 1 --- Proposal:} The REST client constructs a signed transaction
-proposal via the Fabric SDK and sends it to all endorsing peers.
-\textbf{Phase 2 --- Endorsement:} Each endorsing peer \textit{simulates} the
-chaincode against its current world state snapshot and returns a signed
-read-write set. The SDK collects endorsements until the policy
-\texttt{AND(ManufacturerMSP.peer, TransporterMSP.peer)} is satisfied.
-\textbf{Phase 3 --- Ordering:} The endorsed transaction is submitted to the
-Raft orderer, which batches it into a block and broadcasts to all peers.
-\textbf{Phase 4 --- Validation:} Committing peers validate each transaction's
-MVCC read set against the current state, detecting stale reads (phantom reads).
-\textbf{Phase 5 --- Commit:} Valid transactions are applied to CouchDB; an
-event is emitted for SDK notification callbacks.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  step/.style={rectangle, draw=#1!80!black, fill=#1!15, rounded corners=3pt,
-               font=\tiny\bfseries, align=center, minimum width=1.55cm,
-               minimum height=0.57cm},
-  arr/.style={-{Stealth[length=2mm]}, thick, gray},
-  num/.style={circle, draw=asumaroon, fill=asumaroon, text=white,
-              font=\tiny\bfseries, inner sep=1pt, minimum size=0.33cm},
-]
-  \node[step=nodeblue]   (c)   at (0,0)     {REST\\Client};
-  \node[step=nodeorange] (sdk) at (1.75,0)  {Fabric\\SDK};
-  \node[step=nodegreen]  (ep)  at (3.5,0)   {Endorsing\\Peers};
-  \node[step=nodepurple] (ord) at (3.5,-1.2){Orderer\\(Raft)};
-  \node[step=nodeblue]   (vp)  at (1.75,-1.2){Committing\\Peers};
-  \node[step=nodegray]   (db)  at (0,-1.2)  {CouchDB\\State};
-  \draw[arr](c) --  node[above,font=\tiny]{HTTP}    (sdk);
-  \draw[arr](sdk)-- node[above,font=\tiny]{Propose} (ep);
-  \draw[arr](ep) -- node[right,font=\tiny]{Order}   (ord);
-  \draw[arr](ord)-- node[below,font=\tiny]{Block}   (vp);
-  \draw[arr](vp) -- node[below,font=\tiny]{Commit}  (db);
-  \draw[arr,dashed,gray](ep) to[bend right=22]
-        node[left,font=\tiny]{Endorse} (sdk);
-  \node[num] at (0.88,0.25)  {1};
-  \node[num] at (2.63,0.25)  {2};
-  \node[num] at (3.88,-0.6)  {3};
-  \node[num] at (2.63,-1.45) {4};
-  \node[num] at (0.88,-1.45) {5};
-\end{tikzpicture}
-\caption{Execute-Order-Validate transaction pipeline (5 phases).}
-\label{fig:txflow}
-\end{figure}
-
-\subsection{Architectural Design Decision Rationale}
-
-Each major architectural choice reflects a deliberate trade-off evaluation:
-
-\textbf{Hyperledger Fabric over Ethereum:} Fabric's permissioned model is
-essential because supply chain participants (manufacturers, transporters,
-retailers) have known real-world identities---X.509 certificates issued by
-organizational CAs replace anonymous wallets. Ethereum's public ledger would
-expose commercially sensitive shipment metadata to competitors. Gas fees of
-\$0.50--\$50+ per transaction make high-frequency logistics operations
-economically infeasible on public chains.
-
-\textbf{Raft over Kafka/PBFT for Ordering:} Raft provides crash-fault
-tolerance (CFT) with deterministic leader election and requires only $2f+1$
-nodes to tolerate $f$ crashes. Kafka introduces a ZooKeeper dependency
-increasing operational complexity; PBFT does not scale beyond $\sim$30
-nodes. For a two-organization prototype scaling to 3--5 organizations, Raft
-is the optimal balance of fault-tolerance and operational simplicity.
-
-\textbf{CouchDB over LevelDB for World State:} CouchDB enables rich JSON
-selector queries (\texttt{GetQueryResult}), which are necessary for
-\texttt{GetAllShipments} and future analytics. LevelDB supports only
-key-range scans, insufficient for multi-field filtering by status, origin,
-or date range.
-
-\textbf{AND Endorsement Policy over OR:} Requiring endorsement from both
-ManufacturerMSP \textit{and} TransporterMSP eliminates unilateral ledger
-writes---neither party alone can fabricate a shipment record. This
-two-party consensus is the blockchain equivalent of a dual-signature
-requirement in traditional logistics documentation.
-
-\textbf{Composite Keys over Separate Collection for Events:} Storing
-event records as composite-key entries in the main namespace eliminates
-the need for a separate Fabric Private Data Collection or external event
-database. The lexicographic ordering of composite keys provides
-$O(\log n + k)$ chronological queries, equivalent to a sorted index, with
-no additional storage tier.
-
-\subsection{On-Chain / Off-Chain Data Partitioning}
-
-Following best-practice recommendations~\cite{gonczol2020}, sensitive bulk
-data is stored off-chain and only a SHA-256 digest is persisted on the ledger
-(Fig.~\ref{fig:onoffchain}). This design achieves four goals: (i)~keeps
-transaction payload under 1\,KB, preserving throughput; (ii)~satisfies GDPR
-Article~17 right-to-erasure by allowing off-chain deletion without ledger
-modification; (iii)~protects commercially sensitive pricing and contents from
-channel participants who should not see them; and (iv)~provides
-cryptographically strong tamper detection via \texttt{VerifyShipment}.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  store/.style={rectangle, draw=#1!80!black, fill=#1!12, rounded corners=4pt,
-                font=\scriptsize\bfseries, minimum width=3cm,
-                minimum height=0.52cm, align=center},
-  item/.style={rectangle, draw=gray!50, fill=white, rounded corners=2pt,
-               font=\tiny, minimum width=2.7cm, minimum height=0.4cm,
-               align=center},
-  arr/.style={-{Stealth[length=2mm]}, thick},
-]
-  \node[store=fabricblue] (on)  at (-1.55,0) {On-Chain (Ledger)};
-  \node[item]             at (-1.55,-0.58) {shipmentID, status};
-  \node[item]             at (-1.55,-1.03) {origin, destination};
-  \node[item]             at (-1.55,-1.48) {currentHolder, participants};
-  \node[item, fill=asugold!30] (i4) at (-1.55,-1.93) {dataHash (SHA-256)};
-  \node[item]             at (-1.55,-2.38) {createdAt, updatedAt};
-  \node[store=nodeorange] (off) at (2.2,0)  {Off-Chain (Ext.\ DB)};
-  \node[item]             at (2.2,-0.58)  {weight, volume, dims};
-  \node[item]             at (2.2,-1.03)  {contents description};
-  \node[item]             at (2.2,-1.48)  {customer PII};
-  \node[item] (o4)        at (2.2,-1.93)  {pricing, contracts};
-  \node[item]             at (2.2,-2.38)  {media attachments};
-  \draw[arr, asumaroon, very thick]
-    (i4.east) -- node[above,font=\tiny\bfseries,text=asumaroon]{verify} (o4.west);
-  \node[font=\tiny,text=gray,align=center] at (0.3,-3.05)
-    {SHA-256 bridges on-chain proof with off-chain data};
-\end{tikzpicture}
-\caption{On-chain vs.\ off-chain data partitioning with SHA-256 bridge.}
-\label{fig:onoffchain}
-\end{figure}
-
-% ════════════════════════════════════════════════════════════════
-%  IV. IMPLEMENTATION DETAILS
-% ════════════════════════════════════════════════════════════════
-\section{Implementation Details}
-
-\subsection{Shipment Data Model}
-
-The core ledger object is the \texttt{Shipment} struct, which captures all
-on-chain fields required for provenance tracking. The \texttt{Participants}
-map is keyed by MSPID string, enabling $O(1)$ authorization checks at
-transaction time. The \texttt{DataHash} field stores the hex-encoded SHA-256
-digest of the caller-supplied off-chain payload, establishing the integrity
-bridge with external storage.
-
-\begin{lstlisting}[caption={Core Shipment struct (chaincode/shipment/main.go)},
-                   label={lst:struct}]
-type Shipment struct {
-  ShipmentID    string           `json:"shipmentID"`
-  Origin        string           `json:"origin"`
-  Destination   string           `json:"destination"`
-  Status        string           `json:"status"`
-  CurrentHolder string           `json:"currentHolder"`
-  Participants  map[string]bool  `json:"participants"`
-  DataHash      string           `json:"dataHash"`
-  CreatedAt     string           `json:"createdAt"`
-  UpdatedAt     string           `json:"updatedAt"`
-}
-\end{lstlisting}
-
-\subsection{Shipment Lifecycle State Machine}
-
-Fig.~\ref{fig:statemachine} presents the finite state machine (FSM) governing
-valid status transitions. The valid status values are \texttt{Created},
-\texttt{InTransit}, \texttt{InWarehouse}, \texttt{WithRetailer}, and
-\texttt{Delivered}. The transition guard logic is encoded directly in
-\texttt{UpdateStatus} and \texttt{TransferCustody}: any attempt to write to
-a \texttt{Delivered} shipment returns an error before any ledger state is read
-or written, ensuring the terminal-state invariant cannot be bypassed.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  state/.style={rectangle, draw=fabricblue!80, fill=fabricblue!10,
-                rounded corners=5pt, font=\tiny\bfseries, align=center,
-                minimum width=1.55cm, minimum height=0.58cm, drop shadow},
-  final/.style={rectangle, draw=darkgreen!80, fill=darkgreen!15,
-                rounded corners=5pt, font=\tiny\bfseries, align=center,
-                minimum width=1.55cm, minimum height=0.58cm, double, drop shadow},
-  arr/.style={-{Stealth[length=2mm]}, thick, asumaroon},
-  lbl/.style={font=\tiny, text=gray},
-]
-  \node[state] (cr) at (0,0)      {Created};
-  \node[state] (it) at (2.3,0)    {InTransit};
-  \node[state] (iw) at (4.6,0)    {InWare-\\house};
-  \node[state] (wr) at (2.3,-1.4) {With\\Retailer};
-  \node[final] (dl) at (4.6,-1.4) {Delivered\\(locked)};
-  \draw[arr](cr)--node[above,lbl]{Transfer}(it);
-  \draw[arr](it)--node[above,lbl]{Transfer}(iw);
-  \draw[arr](iw)--node[left, lbl]{Transfer}(wr);
-  \draw[arr](wr)--node[below,lbl]{UpdateStatus}(dl);
-  \draw[arr](it) to[bend right=28] node[left,lbl]{UpdateStatus} (iw);
-  \node[font=\tiny,text=darkgreen,align=center] at (6.1,-1.4)
-    {\textbf{Terminal}\\writes\\rejected};
-  \draw[->,gray!50,dashed](5.6,-1.4)--(dl.east);
-\end{tikzpicture}
-\caption{Shipment status FSM. \textit{Delivered} is terminal; all writes rejected.}
-\label{fig:statemachine}
-\end{figure}
-
-\subsection{RBAC Implementation}
-
-Access control is enforced at the top of each chaincode function using a
-helper that extracts the caller's MSPID from the serialized X.509 identity
-embedded in the transaction proposal. Listing~\ref{lst:rbac} shows the
-\texttt{getCallerMSPID} helper and its use in \texttt{TransferCustody}, the
-most security-critical function in the contract.
-
-\begin{lstlisting}[caption={RBAC helper and custody transfer guard},
-                   label={lst:rbac}]
-func getCallerMSPID(
-    ctx contractapi.TransactionContextInterface,
-) (string, error) {
-  id, err := cid.GetMSPID(ctx.GetStub())
-  if err != nil {
-    return "", fmt.Errorf("get MSPID: %v", err)
-  }
-  return id, nil
-}
-
-func (s *SmartContract) TransferCustody(
-    ctx contractapi.TransactionContextInterface,
-    shipmentID, newHolder string) error {
-  mspID, _ := getCallerMSPID(ctx)
-  ship, err := s.GetShipment(ctx, shipmentID)
-  if err != nil { return err }
-  if ship.Status == "Delivered" {
-    return fmt.Errorf("shipment delivered; immutable")
-  }
-  if ship.CurrentHolder != mspID {
-    return fmt.Errorf("%s is not current holder", mspID)
-  }
-  ship.CurrentHolder = newHolder
-  ship.Status        = "InTransit"
-  // persist and emit composite-key event ...
-  return nil
-}
-\end{lstlisting}
-
-Fig.~\ref{fig:rbac} provides the access matrix for all 10 chaincode functions.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  hdr/.style={rectangle, fill=asumaroon, text=white, font=\tiny\bfseries,
-              minimum width=2.05cm, minimum height=0.44cm, align=center},
-  cell/.style={rectangle, draw=gray!30, fill=#1, font=\tiny,
-               minimum width=2.05cm, minimum height=0.42cm, align=center},
-  lhdr/.style={rectangle, fill=gray!20, font=\tiny\bfseries,
-               minimum width=2.4cm, minimum height=0.42cm,
-               align=left, inner sep=3pt},
-]
-  \node[hdr] at (0,0)     {Operation};
-  \node[hdr] at (2.1,0)   {Any Org};
-  \node[hdr] at (4.2,0)   {Holder Only};
-  \foreach \op/\any/\holder/\y in {
-    CreateShipment/\cmark/          /-0.44,
-    GetShipment/          /\cmark/-0.88,
-    UpdateStatus/         /\cmark/-1.32,
-    TransferCustody/      /\cmark/-1.76,
-    AuthorizeParticipant/ /\cmark/-2.20,
-    RevokeParticipant/    /\cmark/-2.64,
-    VerifyShipment/\cmark/          /-3.08,
-    GetAllShipments/\cmark/         /-3.52
-  }{
-    \node[lhdr]             at (0,\y)    {\texttt{\op}};
-    \node[cell=nodegreen!40]at (2.1,\y)  {\textcolor{darkgreen}{\any}};
-    \node[cell=nodeblue!40] at (4.2,\y)  {\textcolor{fabricblue}{\holder}};
-  }
-  \draw[thick,gray!40](-1.2,0.22) rectangle (5.24,-3.74);
-\end{tikzpicture}
-\caption{RBAC matrix: caller roles permitted per chaincode operation.}
-\label{fig:rbac}
-\end{figure}
-
-\subsection{SHA-256 Integrity Verification}
-
-Fig.~\ref{fig:sha256} details the verification flow. When a shipment is
-created, the caller computes \texttt{SHA-256(payload)} client-side and submits
-the hex digest as \texttt{dataHash}. The chaincode stores this value without
-inspecting the raw payload. To verify, any authorized participant calls
-\texttt{VerifyShipment(id, payload)}: the chaincode recomputes the digest and
-performs a constant-time string comparison against the stored hash.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  box/.style={rectangle, draw=#1!70!black, fill=#1!15, rounded corners=3pt,
-              font=\tiny, align=center, minimum width=2.1cm,
-              minimum height=0.52cm},
-  arr/.style={-{Stealth[length=2mm]}, thick},
-  dec/.style={diamond, draw=asumaroon, fill=asumaroon!10, font=\tiny\bfseries,
-              align=center, inner sep=1pt, aspect=2},
-]
-  \node[box=nodeorange](od)  at (0,0)     {Off-chain Data ($d$)};
-  \node[box=nodeblue]  (hs)  at (3.2,0)  {SHA-256($d$)=$H_{new}$};
-  \node[box=fabricblue,text=white](oc) at (0,-1.2) {On-chain $H_{stored}$};
-  \node[dec]           (cmp) at (3.2,-1.2){$H_{new}$\\$=$\\$H_{stored}$?};
-  \node[box=nodegreen] (ok)  at (4.9,-2.1){\textcolor{darkgreen}{\cmark} Authentic};
-  \node[box=nodered]   (bad) at (1.3,-2.1){\textcolor{red}{\xmark} Tampered};
-  \draw[arr](od)--(hs);
-  \draw[arr](oc)--(cmp); \draw[arr](hs)--(cmp);
-  \draw[arr,darkgreen](cmp)--node[right,font=\tiny]{Yes}(ok);
-  \draw[arr,red]      (cmp)--node[left, font=\tiny]{No} (bad);
-\end{tikzpicture}
-\caption{SHA-256 off-chain integrity verification decision flow.}
-\label{fig:sha256}
-\end{figure}
-
-\subsection{Composite Key Event History}
-
-Rather than overwriting shipment state on every update, each chaincode
-mutation appends a \texttt{ShipmentEvent} record under a composite key of
-the form \texttt{("event", shipmentID, RFC3339-timestamp)}.
-Fabric's lexicographic key ordering allows \texttt{GetHistory} to execute
-a single \texttt{GetStateByPartialCompositeKey("event", [shipmentID])} call,
-returning all events for a shipment in chronological order without a full
-ledger scan. The time complexity is $O(\log n + k)$ where $n$ is total key
-count and $k$ is the event count for the queried shipment. Fig.~\ref{fig:compkey}
-illustrates the key layout.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  key/.style={rectangle, draw=fabricblue!60, fill=fabricblue!8, rounded corners=2pt,
-              font=\tiny\ttfamily, align=left, inner sep=3pt,
-              minimum width=5.2cm, minimum height=0.44cm},
-  lbl/.style={font=\tiny\bfseries, text=asumaroon},
-  sub/.style={font=\tiny, text=gray},
-]
-  \node[lbl] at (0,0)
-    {Key: \texttt{"event" \textbackslash 0 <shipID> \textbackslash 0 <ts> \textbackslash 0}};
-  \node[key] at (0,-0.58) {event\textbackslash 0SHIP-001\textbackslash 02024-01-01T10:00Z\textbackslash 0};
-  \node[sub,right=-0.1cm] at (3.0,-0.58)  {$\leftarrow$ CREATED};
-  \node[key] at (0,-1.04) {event\textbackslash 0SHIP-001\textbackslash 02024-01-02T08:30Z\textbackslash 0};
-  \node[sub,right=-0.1cm] at (3.0,-1.04)  {$\leftarrow$ TRANSFER};
-  \node[key] at (0,-1.50) {event\textbackslash 0SHIP-001\textbackslash 02024-01-03T14:00Z\textbackslash 0};
-  \node[sub,right=-0.1cm] at (3.0,-1.50)  {$\leftarrow$ STATUS\_UPDATE};
-  \node[key] at (0,-1.96) {event\textbackslash 0SHIP-001\textbackslash 02024-01-05T09:00Z\textbackslash 0};
-  \node[sub,right=-0.1cm] at (3.0,-1.96)  {$\leftarrow$ DELIVERED};
-  \draw[decorate,decoration={brace,amplitude=5pt},thick,asumaroon]
-    (3.1,-0.38)--(3.1,-2.14)
-    node[midway,right=6pt,font=\tiny,align=left]
-      {PartialCompositeKey\\query returns all events\\for SHIP-001, ordered};
-\end{tikzpicture}
-\caption{Composite key layout for per-shipment chronological event queries.}
-\label{fig:compkey}
-\end{figure}
-
-\subsection{Input Validation and Error Handling}
-
-Every chaincode function applies layered validation before performing ledger
-operations. The validation sequence is: (1)~\textbf{Authorization check} ---
-extract MSPID and verify caller is in the participants map or is the current
-holder; (2)~\textbf{Terminal state guard} --- if \texttt{Status == "Delivered"},
-return error immediately without reading further state; (3)~\textbf{Field
-validation} --- reject empty \texttt{shipmentID}, \texttt{origin}, or
-\texttt{destination} strings; (4)~\textbf{Existence check} ---
-\texttt{GetShipment} returns a typed \texttt{"not found"} error distinct from
-a ledger I/O error; (5)~\textbf{Duplicate prevention} ---
-\texttt{CreateShipment} checks for an existing key before writing, preventing
-accidental or malicious re-creation. All errors surface as typed Go
-\texttt{error} values that the REST API layer propagates as structured JSON
-with HTTP status codes (400, 403, 404, 409, 500), enabling deterministic
-client-side error handling.
-
-\subsection{Chaincode Events for Off-Chain Indexing}
-
-Every mutating chaincode function emits a named Fabric chaincode event via
-\texttt{stub.SetEvent(name, payload)}. Event names follow the pattern
-\texttt{SHIPMENT\_CREATED}, \texttt{CUSTODY\_TRANSFERRED},
-\texttt{STATUS\_UPDATED}, \texttt{PARTICIPANT\_AUTHORIZED}, and
-\texttt{PARTICIPANT\_REVOKED}. The event payload is the JSON-serialized
-post-transaction \texttt{Shipment} object, enabling downstream consumers
-(the Node.js REST server, analytics pipelines, or notification services)
-to subscribe via the Fabric SDK \texttt{contract.addContractListener} and
-maintain off-chain projections without polling the ledger. This event-driven
-design decouples ledger state from read-model materialization and is critical
-for performance-sensitive dashboard applications that cannot afford per-request
-\texttt{GetAllShipments} calls.
-
-\subsection{Smart Contract and REST API Function Summary}
-
-Table~\ref{tab:functions} enumerates all 10 public chaincode functions.
-Table~\ref{tab:api} maps each to its corresponding REST endpoint.
-Fig.~\ref{fig:apiflow} traces the full request path from HTTP client to ledger.
-
-\begin{table}[htbp]
-\centering
-\caption{Smart contract functions, RBAC, and constraints.}
-\label{tab:functions}
-\scriptsize
-\begin{tabularx}{\columnwidth}{lXl}
-\toprule
-\textbf{Function} & \textbf{Description} & \textbf{Caller} \\
-\midrule
-\texttt{InitLedger}          & Seeds sample shipment           & Any \\
-\texttt{CreateShipment}      & Registers new shipment          & Any Org \\
-\texttt{GetShipment}         & Returns shipment details        & Participant \\
-\texttt{UpdateStatus}        & Changes status field            & Holder \\
-\texttt{TransferCustody}     & Transfers custody to next org   & Holder \\
-\texttt{VerifyShipment}      & SHA-256 integrity check         & Any Org \\
-\texttt{GetHistory}          & Returns event timeline          & Participant \\
-\texttt{AuthorizeParticipant}& Adds party to access list       & Holder \\
-\texttt{RevokeParticipant}   & Removes party (no self-revoke)  & Holder \\
-\texttt{GetAllShipments}     & Returns all ledger shipments    & Any Org \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\caption{REST API endpoint to chaincode function mapping.}
-\label{tab:api}
-\scriptsize
-\begin{tabularx}{\columnwidth}{llX}
-\toprule
-\textbf{Method} & \textbf{Endpoint} & \textbf{Chaincode Fn} \\
-\midrule
-POST   & /api/shipments                      & CreateShipment \\
-GET    & /api/shipments                      & GetAllShipments \\
-GET    & /api/shipments/:id                  & GetShipment \\
-PUT    & /api/shipments/:id/status           & UpdateStatus \\
-PUT    & /api/shipments/:id/transfer         & TransferCustody \\
-GET    & /api/shipments/:id/verify           & VerifyShipment \\
-GET    & /api/shipments/:id/history          & GetHistory \\
-POST   & /api/shipments/:id/participants     & AuthorizeParticipant \\
-DELETE & /api/shipments/:id/participants/:p  & RevokeParticipant \\
-GET    & /api/health                         & Health check \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  layer/.style={rectangle, draw=#1!80!black, fill=#1!12, rounded corners=3pt,
-                font=\tiny\bfseries, align=center, minimum width=1.7cm,
-                minimum height=0.52cm},
-  arr/.style={-{Stealth[length=2mm]}, thick, gray!70},
-]
-  \node[layer=nodeblue]   (cli) at (0,0)    {HTTP Client\\(curl / app)};
-  \node[layer=nodeorange] (exp) at (2.3,0)  {Express\\Server};
-  \node[layer=nodegreen]  (sdk) at (4.6,0)  {Fabric\\SDK v2};
-  \node[layer=fabricblue,text=white](cc) at (4.6,-1.3){Chaincode\\(Go)};
-  \node[layer=nodegray]   (ld)  at (2.3,-1.3){Ledger /\\CouchDB};
-  \draw[arr](cli)--node[above,font=\tiny]{REST}(exp);
-  \draw[arr](exp)--node[above,font=\tiny]{submitTx}(sdk);
-  \draw[arr](sdk)--node[right,font=\tiny]{invoke}(cc);
-  \draw[arr](cc)--node[below,font=\tiny]{PutState/GetState}(ld);
-  \draw[arr,dashed](ld) to[bend left=28] node[left,font=\tiny]{result}(exp);
-  \draw[arr,dashed](exp) to[bend right=28] node[below,font=\tiny]{JSON}(cli);
-\end{tikzpicture}
-\caption{HTTP request path from REST client through SDK to ledger and back.}
-\label{fig:apiflow}
-\end{figure}
-
-% ════════════════════════════════════════════════════════════════
-%  V. RESULTS
-% ════════════════════════════════════════════════════════════════
-\section{Results}
-
-\subsection{Unit Test Strategy and Infrastructure}
-
-Testing a Hyperledger Fabric chaincode without a live network requires
-injecting mock infrastructure at three levels: (i)~the stub layer
-(\texttt{shimtest.MockStub}) for ledger state simulation; (ii)~the client
-identity layer for MSPID-based RBAC; and (iii)~the X.509 certificate layer
-for serialized identity validation. The standard \texttt{shimtest.MockStub}
-does not populate the creator field by default, causing \texttt{cid.GetMSPID()}
-to return an error on every call.
-
-We solved this by constructing fully valid serialized X.509 identities at
-test time using Go's \texttt{crypto/ecdsa} and \texttt{crypto/x509} packages,
-marshalled into \texttt{mspproto.SerializedIdentity} protobuf messages.
-This approach requires no external Certificate Authority and produces
-deterministic, reproducible test identities that are indistinguishable from
-real Fabric identities at the chaincode API level.
-Listing~\ref{lst:testid} shows the identity injection helper.
-
-\begin{lstlisting}[caption={Mock X.509 identity injection for RBAC testing},
-                   label={lst:testid}]
-func setCreator(t *testing.T,
-    stub *shimtest.MockStub, mspID string) {
-  privKey, _ := ecdsa.GenerateKey(
-    elliptic.P256(), rand.Reader)
-  template := &x509.Certificate{
-    SerialNumber: big.NewInt(1),
-    Subject: pkix.Name{
-      Organization: []string{mspID},
-    },
-    NotBefore: time.Now(),
-    NotAfter:  time.Now().Add(time.Hour),
-  }
-  certDER, _ := x509.CreateCertificate(rand.Reader,
-    template, template,
-    &privKey.PublicKey, privKey)
-  sid, _ := proto.Marshal(
-    &msp.SerializedIdentity{
-      Mspid: mspID,
-      IdBytes: pem.EncodeToMemory(&pem.Block{
-        Type:  "CERTIFICATE",
-        Bytes: certDER,
-      }),
-    })
-  stub.Creator = sid
-}
-\end{lstlisting}
-
-\subsection{Unit Test Results}
-
-All 15 tests pass in 0.437 seconds on a standard development machine
-(Apple M1, 16\,GB RAM). Table~\ref{tab:tests} lists each test case and its
-corresponding functional area.
-
-\begin{table}[htbp]
-\centering
-\caption{Unit test results --- 15/15 passed in 0.437\,s.}
-\label{tab:tests}
-\scriptsize
-\begin{tabularx}{\columnwidth}{clX}
-\toprule
-\# & \textbf{P/F} & \textbf{Test Case} \\
-\midrule
-1  & \textcolor{darkgreen}{\cmark} & InitLedger --- sample data seeded \\
-2  & \textcolor{darkgreen}{\cmark} & CreateShipment --- new shipment stored \\
-3  & \textcolor{darkgreen}{\cmark} & CreateShipmentDuplicate --- rejected \\
-4  & \textcolor{darkgreen}{\cmark} & UpdateShipmentStatus --- valid transition \\
-5  & \textcolor{darkgreen}{\cmark} & UpdateStatusInvalid --- bad status rejected \\
-6  & \textcolor{darkgreen}{\cmark} & TransferCustody --- successful MSP transfer \\
-7  & \textcolor{darkgreen}{\cmark} & TransferUnauthorized --- non-holder blocked \\
-8  & \textcolor{darkgreen}{\cmark} & VerifyShipmentValid --- correct hash passes \\
-9  & \textcolor{darkgreen}{\cmark} & VerifyShipmentInvalid --- tampered data caught \\
-10 & \textcolor{darkgreen}{\cmark} & AuthorizeParticipant --- participant added \\
-11 & \textcolor{darkgreen}{\cmark} & RevokeParticipant --- participant removed \\
-12 & \textcolor{darkgreen}{\cmark} & FullLifecycle --- 4-org end-to-end flow \\
-13 & \textcolor{darkgreen}{\cmark} & DeliveredLocked --- post-delivery writes blocked \\
-14 & \textcolor{darkgreen}{\cmark} & GetAllShipments --- full ledger retrieval \\
-15 & \textcolor{darkgreen}{\cmark} & ComputeHash --- SHA-256 output verified \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-Fig.~\ref{fig:testcoverage} visualizes test coverage by functional area.
-Lifecycle and state management tests are most numerous, reflecting the
-complexity of the FSM transitions and terminal-state enforcement.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  xbar, width=\columnwidth*0.88, height=4.6cm, bar width=6pt,
-  xmin=0, xmax=5,
-  xlabel={\tiny Number of Tests Covering Area},
-  xtick={0,1,2,3,4},
-  ytick=data,
-  yticklabels={
-    {RBAC / Authorization},
-    {Integrity / SHA-256},
-    {Lifecycle / State},
-    {CRUD / Query},
-    {Custody Transfer}
-  },
-  yticklabel style={font=\tiny},
-  xlabel style={font=\tiny},
-  nodes near coords, nodes near coords style={font=\tiny},
-  every axis/.append style={font=\tiny},
-  axis lines=left, enlarge y limits=0.2,
-  color=fabricblue, fill=fabricblue!40,
-]
-\addplot coordinates {(3,0)(2,1)(4,2)(3,3)(3,4)};
-\end{axis}
-\end{tikzpicture}
-\caption{Unit test coverage by functional area (15 tests total).}
-\label{fig:testcoverage}
-\end{figure}
-
-\subsection{End-to-End Lifecycle Validation}
-
-\texttt{TestFullLifecycle} exercises 7 of 10 chaincode functions across 4
-mock organizational identities. The test sequence is:
-(1)~\textit{InitLedger}; (2)~\textit{CreateShipment} by ManufacturerMSP;
-(3)~\textit{TransferCustody} Manufacturer$\to$Transporter;
-(4)~\textit{TransferCustody} Transporter$\to$Warehouse;
-(5)~\textit{UpdateStatus} to \texttt{InWarehouse};
-(6)~\textit{TransferCustody} Warehouse$\to$Retailer;
-(7)~\textit{UpdateStatus} to \texttt{Delivered};
-(8)~assert post-delivery status update returns error;
-(9)~assert post-delivery custody transfer returns error.
-Steps (8) and (9) confirm terminal-state immutability at the chaincode level.
-Fig.~\ref{fig:custodyseq} visualizes the inter-organizational message sequence.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  actor/.style={rectangle, draw=#1!80, fill=#1!15, rounded corners=2pt,
-                font=\tiny\bfseries, align=center,
-                minimum width=1.1cm, minimum height=0.46cm},
-  msg/.style={-{Stealth[length=1.8mm]}, thick, #1},
-  lifeline/.style={dashed, gray!50, very thin},
-  evt/.style={font=\tiny, text=#1},
-]
-  \node[actor=nodeblue]   (mfg) at (0,0)   {Mfg};
-  \node[actor=nodeorange] (trp) at (1.6,0) {Trp};
-  \node[actor=nodegreen]  (whs) at (3.2,0) {Whs};
-  \node[actor=nodepurple] (ret) at (4.8,0) {Ret};
-  \foreach \x in {0,1.6,3.2,4.8}
-    \draw[lifeline](\x,-0.23)--(\x,-4.2);
-  \draw[msg=fabricblue](0,-0.6)--
-    node[above,evt=fabricblue]{CreateShipment}(1.6,-0.6);
-  \node[evt=gray,left]at(0,-0.6){\tiny\#1};
-  \draw[msg=asumaroon](0,-1.15)--
-    node[above,evt=asumaroon]{TransferCustody}(1.6,-1.15);
-  \node[evt=gray,left]at(0,-1.15){\tiny\#2};
-  \draw[msg=asumaroon](1.6,-1.7)--
-    node[above,evt=asumaroon]{TransferCustody}(3.2,-1.7);
-  \node[evt=gray,left]at(1.6,-1.7){\tiny\#3};
-  \draw[msg=darkgreen,->](3.2,-2.25)arc(180:0:0.01);
-  \node[evt=darkgreen,right=0.12cm]at(3.2,-2.25)
-    {\tiny UpdateStatus: InWarehouse};
-  \node[evt=gray,left]at(3.2,-2.25){\tiny\#4};
-  \draw[msg=asumaroon](3.2,-2.8)--
-    node[above,evt=asumaroon]{TransferCustody}(4.8,-2.8);
-  \node[evt=gray,left]at(3.2,-2.8){\tiny\#5};
-  \draw[msg=darkgreen,->](4.8,-3.35)arc(180:0:0.01);
-  \node[evt=darkgreen,right=0.12cm]at(4.8,-3.35)
-    {\tiny Delivered (locked)};
-  \node[evt=gray,left]at(4.8,-3.35){\tiny\#6};
-\end{tikzpicture}
-\caption{Custody transfer sequence diagram across four organizations.}
-\label{fig:custodyseq}
-\end{figure}
-
-% ════════════════════════════════════════════════════════════════
-%  VI. ANALYSIS
-% ════════════════════════════════════════════════════════════════
-\section{Analysis}
-
-\subsection{Explicit Scalability Trade-Off Analysis}
-
-The core scalability trade-off in our architecture is between \textit{ledger
-integrity} and \textit{raw throughput}. Fabric's EOV model serializes all
-transactions through an ordering service, introducing an ordering bottleneck
-absent in centralized databases. Our measured estimate of 2,000--3,500 TPS
-assumes a two-organization endorsement policy; adding more endorsing orgs
-reduces throughput proportionally because each additional endorser adds one
-round-trip to the proposal phase. A 5-org policy would reduce peak throughput
-to approximately 1,200--1,800 TPS---still sufficient for most logistics
-workloads but not high-frequency inventory management.
-
-Latency is the second axis of the trade-off. A centralized database write
-completes in $<$10\,ms. A Fabric transaction traverses the full EOV pipeline
-in 500\,ms--2\,s under normal load: $\sim$100\,ms for proposal-endorsement,
-$\sim$200\,ms for ordering, and $\sim$200\,ms for block validation-commit.
-For supply chain operations where shipment transfers are measured in hours,
-this latency is operationally invisible. The integrity guarantee---that no
-single party can unilaterally falsify a record---\textit{cannot be achieved
-at all} in a centralized database at any latency target.
-
-\textbf{Quantitative cross-platform comparison (10,000 tx/day):}
-Ethereum costs \$5,000--\$500,000/month in gas fees (at \$0.50--\$50/tx),
-with 12-second finality and 30 TPS peak---inadequate for production logistics.
-Our Fabric deployment incurs \$1,000--\$4,000/month in infrastructure costs,
-delivers 2-second finality and 2,000+ TPS, and provides GDPR-compatible data
-partitioning. A centralized database costs \$200--\$500/month and offers
-$>$10,000 TPS but provides no cryptographic audit trail, no trustless
-multi-party verification, and no protection against insider tampering.
-
-\subsection{Scalability and Throughput}
-
-Table~\ref{tab:scalability} characterizes system scalability. Fig.~\ref{fig:scalability}
-plots projected ledger size growth, comparing total ledger size against
-CouchDB world state size. Because each transaction payload is under 1\,KB
-and events are stored as lightweight JSON records, ledger growth is
-approximately 3.5\,MB per thousand shipments (assuming 10 events per
-shipment at $\sim$300 bytes each). This is dramatically lower than
-architectures that store raw payloads on-chain.
-
-\begin{table}[htbp]
-\centering
-\caption{Scalability assessment across five dimensions.}
-\label{tab:scalability}
-\scriptsize
-\begin{tabularx}{\columnwidth}{lX}
-\toprule
-\textbf{Factor} & \textbf{Assessment} \\
-\midrule
-Tx payload    & $<$1\,KB (metadata + hash); avoids ledger bloat~\cite{gonczol2020}. \\
-Throughput    & 2,000--3,500 TPS (Fabric 2.5, 2 orgs, Raft)~\cite{fabricdocs}. \\
-State DB      & CouchDB indexing; \texttt{GetAllShipments} requires pagination above 10K records. \\
-Event growth  & Linear: $n$ events $\Rightarrow$ $n$ ledger keys per shipment. \\
-Horizontal    & Add peers per org; 3--5 Raft orderers for CFT in production. \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  width=\columnwidth*0.88, height=4.2cm,
-  xlabel={\tiny Shipments (thousands)},
-  ylabel={\tiny Size (MB)},
-  xlabel style={font=\tiny}, ylabel style={font=\tiny},
-  xtick={0,2,4,6,8,10}, ytick={0,10,20,30,40},
-  xticklabel style={font=\tiny}, yticklabel style={font=\tiny},
-  axis lines=left, grid=major, grid style={gray!20},
-  legend style={font=\tiny, at={(0.05,0.95)}, anchor=north west},
-  mark=*, mark size=1.5pt,
-]
-\addplot[color=fabricblue, mark=*]
-  coordinates {(0,0)(1,3.5)(2,7)(4,14)(6,21)(8,28)(10,35)};
-\addlegendentry{Ledger ($\approx$3.5\,MB/1K ships)};
-\addplot[dashed, color=asumaroon, mark=square*, mark size=1.5pt]
-  coordinates {(0,0)(1,0.5)(2,1)(4,2)(6,3)(8,4)(10,5)};
-\addlegendentry{World State (CouchDB)};
-\end{axis}
-\end{tikzpicture}
-\caption{Projected ledger vs.\ world-state growth (10 events/shipment, 300\,B/event).}
-\label{fig:scalability}
-\end{figure}
-
-\subsection{Transaction Cost Comparison}
-
-Table~\ref{tab:costs} provides a detailed cost comparison across three
-deployment models: public Ethereum, our Fabric deployment, and a traditional
-centralized database. The absence of gas fees in Fabric is the single largest
-cost driver differentiating it from public blockchains at scale. At 10,000
-transactions per day---a moderate logistics workload---Ethereum costs would
-range from \$5,000 to \$500,000 monthly depending on gas prices, versus
-roughly \$1,000--\$4,000 for infrastructure hosting of a Fabric network.
-
-\begin{table}[htbp]
-\centering
-\caption{Transaction cost comparison: Ethereum vs.\ Fabric vs.\ Central DB.}
-\label{tab:costs}
-\scriptsize
-\begin{tabularx}{\columnwidth}{lXXX}
-\toprule
-\textbf{Factor}     & \textbf{Ethereum}    & \textbf{Fabric (Ours)} & \textbf{Central DB} \\
-\midrule
-Per-tx fee     & \$0.50--\$50+      & \$0 (no gas)     & \$0 \\
-Infra/org      & None (public net)  & \$500--2K/mo     & \$200--500/mo \\
-Identity mgmt. & MetaMask wallet    & X.509 / CA PKI   & Username/PW \\
-Finality time  & $\sim$12\,s (PoS)  & $\sim$0.5--2\,s  & $<$10\,ms \\
-Throughput     & $\sim$30 TPS       & 2K--3.5K TPS     & 10K+ TPS \\
-Auditability   & Public ledger      & Channel-scoped   & App-layer logs \\
-Trust model    & Trustless          & Permissioned PKI & Centralized \\
-Privacy        & None               & Channel + RBAC   & Access control \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection{Blockchain vs.\ Centralized Database}
-
-Fig.~\ref{fig:radar} presents a normalized radar chart comparing our
-blockchain solution against a traditional centralized database across six
-evaluation criteria. The blockchain excels on trust, integrity, and
-audit-trail dimensions at the cost of lower raw throughput and greater setup
-complexity. For multi-organization supply chains where participants are
-mutually distrusting, the trust and audit advantages are decisive.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.92]
-  \def\R{1.8}
-  \foreach \lbl/\ang in {
-    Trust/90, Integrity/30, {Audit Trail}/330,
-    {Throughput}/270, {Setup Ease}/210, {Cost Eff.}/150
-  }{ \node[font=\tiny\bfseries] at (\ang:\R*1.28) {\lbl}; }
-  \foreach \r in {0.6,1.2,1.8}
-    \draw[gray!30](0,0) circle (\r);
-  \foreach \ang in {90,30,330,270,210,150}
-    \draw[gray!40](0,0)--(\ang:\R);
-  \draw[thick,asumaroon,fill=asumaroon!20,fill opacity=0.5]
-    (90:0.22*\R)--(30:0.30*\R)--(330:0.25*\R)--
-    (270:1.0*\R)--(210:1.0*\R)--(150:0.88*\R)--cycle;
-  \draw[thick,fabricblue,fill=fabricblue!20,fill opacity=0.5]
-    (90:1.0*\R)--(30:1.0*\R)--(330:1.0*\R)--
-    (270:0.48*\R)--(210:0.30*\R)--(150:0.55*\R)--cycle;
-  \node[font=\tiny,asumaroon] at (-2.3,-2.1)
-    {\rule{8pt}{4pt}\ Centralized DB};
-  \node[font=\tiny,fabricblue] at (0.9,-2.1)
-    {\rule{8pt}{4pt}\ Our Blockchain};
-\end{tikzpicture}
-\caption{Radar comparison: blockchain vs.\ centralized database on six criteria.}
-\label{fig:radar}
-\end{figure}
-
-\subsection{Security and Threat Model}
-
-Table~\ref{tab:threats} maps five classes of supply chain security threats to
-the mechanisms our system uses to neutralize them. Of particular note is
-\textit{insider tampering}: in a centralized database, a privileged
-administrator can silently modify records. In our system, every mutation is
-signed by the caller's X.509 certificate and recorded immutably on the ledger;
-any retrospective modification requires breaking SHA-256 preimage resistance
-and forging a Fabric endorsement signature---both computationally infeasible.
-
-\begin{table}[htbp]
-\centering
-\caption{Threat model and architectural mitigations.}
-\label{tab:threats}
-\scriptsize
-\begin{tabularx}{\columnwidth}{lX}
-\toprule
-\textbf{Threat} & \textbf{Mitigation} \\
-\midrule
-Insider tampering    & Immutable ledger; SHA-256 integrity; any mutation is detectable. \\
-Unauthorized access  & MSP RBAC at chaincode level; CAs can revoke certificates. \\
-Replay attacks       & Fabric nonce + MVCC read-set validation prevents replays. \\
-Off-chain data fraud & \texttt{VerifyShipment} recomputes and compares SHA-256 digest. \\
-Single point failure & Distributed peers + Raft CFT; no single database owner. \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection{Privacy and Regulatory Compliance}
-
-Supply chain data frequently crosses jurisdictions governed by GDPR (EU),
-CCPA (California), HIPAA (US healthcare), and FDA 21 CFR Part~11 (pharma
-electronic records). Table~\ref{tab:privacy} maps each regulatory concern
-to its architectural response in our system.
-
-\begin{table}[htbp]
-\centering
-\caption{Privacy and regulatory compliance analysis.}
-\label{tab:privacy}
-\scriptsize
-\begin{tabularx}{\columnwidth}{lX}
-\toprule
-\textbf{Concern} & \textbf{Architectural Response} \\
-\midrule
-GDPR Art.~17 erasure  & PII stored off-chain; on-chain hash is not PII. \\
-Data minimization     & Only metadata + hash on-chain; bulk data off-chain. \\
-Cross-border transfer & Each org hosts its own peer within its jurisdiction. \\
-FDA 21 CFR Part~11    & Signed, timestamped, immutable history satisfies audit trail. \\
-SOX compliance        & Cryptographic provenance supports financial audit. \\
-Data visibility       & Fabric channels + per-function RBAC restrict access scope. \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-% ════════════════════════════════════════════════════════════════
-%  VII. INNOVATION AND IMPACT
-% ════════════════════════════════════════════════════════════════
-\section{Innovation and Impact}
-
-\subsection{Real-World Deployment Challenges and Adoption Barriers}
-
-Transitioning from prototype to production introduces challenges that pure
-technical design does not resolve:
-
-\textbf{Organizational on-boarding:} Each new organization must generate
-cryptographic key material, configure an MSP, run a Fabric peer, and
-integrate the REST API into existing ERP/WMS systems. For small suppliers
-in developing countries, this is a significant technical and financial
-barrier. Managed Fabric services (IBM Blockchain Platform, Kaleido) reduce
-the operational burden but introduce vendor lock-in.
-
-\textbf{Governance and consortium management:} Every channel configuration
-change (e.g., adding an organization, updating the endorsement policy,
-upgrading chaincode) requires the majority signature of current channel
-members. Without a formal governance framework defining change-management
-procedures, voting rules, and dispute escalation paths, consortium
-participants may block necessary updates, creating protocol stagnation.
-
-\textbf{Key management and certificate lifecycle:} X.509 certificates expire.
-If an organization's MSP CA certificate expires or is compromised, all
-transactions from that organization are rejected. Production deployments
-require automated certificate rotation, CRL (Certificate Revocation List)
-management, and HSM-backed key storage---none of which are implemented in the
-current prototype.
-
-\textbf{Interoperability with legacy systems:} Most existing logistics
-platforms use EDI X12 or EDIFACT message formats. Bridging these to Fabric
-transaction formats requires transformation middleware. Our REST API layer
-provides the correct integration point but translators for EDI, SAP IDoc,
-and Oracle EBS formats are needed for adoption by incumbent carriers.
-
-These challenges underscore that blockchain adoption in supply chains is as
-much a sociotechnical problem as a technical one. The cryptographic and
-consensus mechanisms are solved; organizational coordination, regulatory
-acceptance, and total cost of ownership remain the primary adoption barriers.
-
-\subsection{Technical Innovations}
-
-Our system introduces four design innovations beyond existing Fabric supply
-chain implementations in the literature:
-
-\textbf{Per-shipment dynamic RBAC:} Unlike network-level Fabric policies,
-which apply uniformly to entire channels, our RBAC is encoded in chaincode and
-operates at the individual shipment level. The current holder can authorize a
-new participant (e.g., a customs inspector, insurance auditor, or
-sub-contractor) for a single shipment without reconfiguring any network
-policy. Revocation is equally granular and takes effect on the next
-transaction.
-
-\textbf{SHA-256 off-chain integrity bridge:} The \texttt{VerifyShipment}
-function provides a cryptographically sound link between the on-chain ledger
-and any off-chain storage system. This design is storage-agnostic: the
-off-chain data may reside in a relational database, object store, IPFS, or
-any other medium; verification works as long as the hash matches the stored
-digest.
-
-\textbf{Terminal-state immutability at chaincode level:} Most existing supply
-chain chaincodes rely on application-layer logic to prevent post-delivery
-mutations. Our system enforces immutability at the smart contract level: a
-\texttt{Delivered} shipment cannot be mutated by any caller regardless of
-role, since the guard check occurs before any ledger read or write, making
-it impossible to bypass through SDK manipulation.
-
-\textbf{Composite-key event history with zero full-scan:} The use of
-\texttt{CreateCompositeKey} and \texttt{GetStateByPartialCompositeKey}
-eliminates any need for a separate event-log collection or world-state
-scan. History queries complete in $O(\log n + k)$ time, where $k$ is the
-number of events for the queried shipment, regardless of total ledger size.
-
-\subsection{Practical Impact and Target Industries}
-
-\textbf{Pharmaceuticals:} The US Drug Supply Chain Security Act (DSCSA)
-requires serialized traceability for all prescription drugs. Our system
-provides a DSCSA-compliant track-and-trace backbone with immutable
-custody records.
-
-\textbf{Food safety:} Post FDA Food Safety Modernization Act (FSMA), food
-producers must identify contamination sources within 24 hours. Our composite-key
-history provides instant, ledger-verifiable traceability to the exact
-transfer event.
-
-\textbf{Luxury goods:} High-value items (watches, art, spirits) benefit from
-an immutable provenance record that cannot be counterfeited even by a
-compromised seller, since every ownership transfer is cryptographically signed.
-
-\textbf{General logistics:} Any multi-party custody chain benefits from
-dispute resolution: the \texttt{GetHistory} function returns a
-court-admissible, cryptographically signed audit trail.
-
-A production deployment would additionally require 5+ peer organizations,
-a 3--5 node Raft cluster, ERP/WMS integration via the REST API, an IoT
-gateway for automated sensor-triggered status updates, and a React dashboard
-for real-time shipment visualization.
-
-% ════════════════════════════════════════════════════════════════
-%  VIII. CHALLENGES AND LIMITATIONS
-% ════════════════════════════════════════════════════════════════
-\section{Challenges and Limitations}
-
-\subsection{Technical Challenges Encountered}
-
-\textbf{1.\ Mock Identity Injection for RBAC Testing.}
-The Fabric \texttt{shimtest.MockStub} does not populate the creator field by
-default, so all \texttt{cid.GetMSPID()} calls return an error in test
-contexts. We solved this by constructing fully valid serialized X.509
-identities at test time using Go's \texttt{crypto/ecdsa} and
-\texttt{crypto/x509} packages, marshalled into
-\texttt{mspproto.SerializedIdentity} protobuf messages (Listing~\ref{lst:testid}).
-This approach requires no external PKI and produces deterministic, reproducible
-test identities identical in structure to those issued by a real Fabric CA.
-
-\textbf{2.\ Go Module Dependency Resolution.}
-Hyperledger Fabric's Go dependency tree includes tightly pinned versions of
-gRPC, protobuf, and crypto libraries. Specifying \texttt{go 1.25.4} in
-\texttt{go.mod} initially caused build failures. Downgrading to
-\texttt{go 1.21} and applying \texttt{go mod tidy} with explicit
-\texttt{replace} directives resolved all conflicts.
-
-\textbf{3.\ Multi-Org Network Configuration Consistency.}
-Fabric network configuration spans \texttt{configtx.yaml},
-\texttt{docker-compose.yaml}, per-org crypto-config YAMLs, and channel
-artifacts. A single mismatched MSP name across these files silently
-produces a non-functional channel. We mitigated this by centralizing all
-MSP IDs as environment variables in a shared \texttt{envVar.sh} script and
-validating consistency before network startup.
-
-\textbf{4.\ CouchDB Rich Query Pagination.}
-CouchDB selector queries accessed via the Fabric Go SDK do not natively
-support pagination through \texttt{GetQueryResult}; bookmark-based pagination
-requires \texttt{GetQueryResultWithPagination}. The current
-\texttt{GetAllShipments} implementation is unbounded and will degrade for
-deployments exceeding 10,000 shipments.
-
-\subsection{Current Limitations}
-
-Several known limitations must be addressed before production deployment:
-(i)~\textbf{Two organizations only}: a real deployment requires 5+ orgs;
-(ii)~\textbf{Single Raft orderer}: three or five orderers provide CFT;
-(iii)~\textbf{No GUI}: interaction is exclusively via REST API;
-(iv)~\textbf{No IPFS}: off-chain storage is referenced by hash but no
-content-addressed storage integration is implemented;
-(v)~\textbf{No pagination} in \texttt{GetAllShipments}.
-
-% ════════════════════════════════════════════════════════════════
-%  IX. FUTURE WORK
-% ════════════════════════════════════════════════════════════════
-\section{Future Work}
-
-Seven directions offer the highest value for extending this system:
-
-\begin{enumerate}[nosep, leftmargin=*]
-  \item \textbf{Private Data Collections (PDC):} Fabric PDCs allow bilateral
-        data sharing between specific orgs within a channel without exposing
-        data to other members---critical for pricing and contract terms.
-  \item \textbf{IPFS Off-Chain Storage:} Replacing ad-hoc databases with IPFS
-        provides content-addressed, censorship-resistant storage; the IPFS
-        CID itself serves as the on-chain hash.
-  \item \textbf{CouchDB Bookmark Pagination:}
-        \texttt{GetQueryResultWithPagination} with client-side bookmark tokens
-        enables production-scale \texttt{GetAllShipments} queries.
-  \item \textbf{IoT Sensor Integration:} GPS and temperature sensors can
-        trigger automated \texttt{UpdateStatus} transactions, removing manual
-        updates and enabling SLA breach detection.
-  \item \textbf{React/Next.js Dashboard:} A real-time web dashboard with map
-        visualization of shipment locations, timeline views, and alert
-        notifications would significantly improve operator usability.
-  \item \textbf{Hyperledger Caliper Benchmarking:} Systematic load testing
-        would produce empirical TPS, latency percentile, and resource
-        consumption baselines for capacity planning.
-  \item \textbf{Multi-Orderer Raft Cluster:} Deploying a 3-node or 5-node
-        Raft cluster eliminates the ordering service as a single point of
-        failure, providing crash-fault tolerance for production workloads.
+Shakhbulatov et al.\ \cite{shakhbulatov2020} surveyed blockchain in supply
+chain management and identified Hyperledger Fabric as the dominant enterprise
+platform due to its modular architecture.  Their key finding was that most
+academic prototypes stop at design without deploying a live network --- a gap
+our work directly addresses.
+
+\"{O}g\"{u}z et al.\ \cite{oguz2024} reviewed 87 studies and identified
+\textit{access control} and \textit{off-chain data management} as the two
+most underaddressed technical challenges.  Our system tackles both through
+chaincode-level RBAC and a SHA-256 off-chain integrity bridge
+(Section~\ref{sec:offchain}).
+
+Gonczol et al.\ \cite{gonczol2020} analyzed 34 real-world blockchain supply
+chain implementations and found that none achieved full decentralization
+across all five stakeholder tiers in a single system.  Our architecture
+covers all five roles within one chaincode deployment.
+
+\section{System Architecture}
+
+\subsection{Network Topology}
+
+The system has three layers: (1) a client application layer (Node.js +
+Express + Fabric SDK), (2) a blockchain network layer (Hyperledger Fabric
+2.5), and (3) an off-chain storage layer referenced by on-chain hash.
+
+The Fabric network comprises two peer organizations (Org1MSP and Org2MSP),
+one Raft orderer node, and CouchDB as the world state database for each
+peer.  A single channel (\texttt{shipchannel}) connects all participants.
+The chaincode runs via Chaincode as a Service (CCaaS) --- a standalone gRPC
+server in Docker --- which avoids Docker-in-Docker limitations on macOS
+and simplifies host-side builds.
+
+\subsection{Stakeholder Roles}
+
+Five roles are defined with distinct access levels:
+
+\begin{itemize}
+  \item \textbf{Manufacturer (Org1MSP):} Creates shipments, assigns unique
+    IDs, defines the participant list, and holds initial custody.
+  \item \textbf{Transporter (Org2MSP):} Receives custody transfers, posts
+    route status updates and IoT telemetry readings.
+  \item \textbf{Warehouse:} Records receipt and storage condition updates.
+  \item \textbf{Retailer:} Verifies product authenticity via hash check and
+    records receipt.
+  \item \textbf{Recipient:} Confirms final delivery and sets the terminal
+    state \texttt{Delivered} (permanently locked).
+\end{itemize}
+
+\subsection{Product Journey}
+
+The shipment lifecycle follows:
+\textit{Created} $\rightarrow$ \textit{InTransit} $\rightarrow$
+\textit{InWarehouse} $\rightarrow$ \textit{WithRetailer} $\rightarrow$
+\textit{Delivered}.
+Each transition is recorded as an immutable on-chain event with the actor's
+MSP identity, an orderer-assigned timestamp, and optional location and notes.
+
+\section{Implementation}
+
+\subsection{Smart Contract Design}
+
+The chaincode is implemented in Go using
+\texttt{fabric-contract-api-go} v1.2.2.  Three data structures are defined:
+\texttt{Shipment} stores current state (ID, status, origin, destination,
+current holder, participant list, SHA-256 hash, timestamps);
+\texttt{ShipmentEvent} forms an append-only audit log (event type, actor,
+location, timestamp, notes); and \texttt{DeviceRecord} holds the IoT device
+registry entry (device ID, type, registering organization, timestamp).
+Fourteen public functions cover the full lifecycle:
+\texttt{InitLedger}, \texttt{CreateShipment},
+\texttt{GetShipment}, \texttt{UpdateShipmentStatus},
+\texttt{TransferCustody}, \texttt{VerifyShipment},
+\texttt{GetShipmentHistory}, \texttt{AuthorizeParticipant},
+\texttt{RevokeParticipant}, \texttt{RecordTelemetry},
+\texttt{GetAllShipments}, \texttt{RegisterDevice},
+\texttt{RecordDocument}, and \texttt{GetShipmentsPaginated}.
+
+\subsection{Transactions and Events}
+
+Every state-changing function calls \texttt{emitEvent()}, which performs two
+operations atomically within one Fabric transaction:
+
+\begin{enumerate}
+  \item Writes a \texttt{ShipmentEvent} record to the ledger under composite
+    key \texttt{EVENT/\{shipmentID\}/\{timestamp\}}, enabling efficient
+    partial-key scans that retrieve the full audit trail for one shipment
+    without scanning the entire world state.
+  \item Calls \texttt{ctx.GetStub().SetEvent()} to emit a real Fabric
+    chaincode event that SDK subscribers can receive in real time, enabling
+    event-driven downstream integrations.
 \end{enumerate}
 
-% ════════════════════════════════════════════════════════════════
-%  X. CONCLUSION
-% ════════════════════════════════════════════════════════════════
-\section{Conclusion}
+\subsection{Access Control}
 
-This paper presented the complete design, implementation, and evaluation of a
-blockchain-based shipment tracking system on Hyperledger Fabric 2.5.  We
-addressed the fundamental trust deficit inherent in multi-organization supply
-chains---where no single authoritative record of custody exists---by building
-a shared, immutable, cryptographically signed ledger that every authorized
-participant can independently verify.
+RBAC is enforced at the chaincode layer using the submitter's MSP ID
+extracted from their X.509 certificate via
+\texttt{ctx.GetClientIdentity().GetMSPID()}.  Because identity comes from
+the certificate rather than a function argument, callers cannot spoof their
+organizational identity.  The access model is:
 
-Our Go chaincode (647 lines, 10 functions) provides MSP-rooted per-shipment
-RBAC, SHA-256 off-chain data integrity verification, composite-key event
-history supporting $O(\log n + k)$ audit queries, and terminal-state
-immutability that permanently prevents post-delivery modification. A Node.js
-REST API with 10 endpoints abstracts Fabric SDK complexity from consuming
-applications. The two-organization Fabric network with Raft consensus and
-CouchDB world state provides the foundation for scaling to production.
+\begin{itemize}
+  \item \textit{Create, Verify, History, GetAll, GetAllPaginated:} Any authenticated org
+  \item \textit{GetShipment:} Authorized participants of that shipment only
+  \item \textit{UpdateStatus, Transfer, Authorize, Revoke, RegisterDevice:} Current holder only
+  \item \textit{RecordTelemetry, RecordDocument:} Any authorized participant; telemetry additionally requires the device to be pre-registered via \texttt{RegisterDevice}
+\end{itemize}
 
-Correctness is confirmed by 15 unit tests that achieve 100\% function
-coverage and validate all RBAC rules, state transitions, integrity checks,
-and edge cases in 0.437 seconds without requiring a live Fabric network.
-A quantitative multi-axis analysis demonstrates that while our blockchain
-approach trades raw throughput (2,000--3,500 vs.\ $>$10,000 TPS for a
-centralized database) and setup simplicity for trustlessness, tamper-evidence,
-cryptographic auditability, and decentralized dispute resolution. For the
-multi-organization supply chain domain, where participants are mutually
-distrusting and regulatory compliance demands an irrefutable audit trail,
-this trade-off is both justified and increasingly mandated by legislation
-such as DSCSA and FSMA.
+A shipment in the \texttt{Delivered} state is permanently locked at the
+chaincode layer --- no further writes are accepted regardless of caller
+identity.
 
-Future work will extend the system with private data collections for
-bilateral confidentiality, IoT-triggered status automation, IPFS-backed
-content-addressed off-chain storage, and a Hyperledger Caliper benchmark
-suite to empirically characterize production-scale performance.
+\subsection{Off-Chain Data and the SHA-256 Integrity Bridge}
+\label{sec:offchain}
 
-% ════════════════════════════════════════════════════════════════
-%  XI. TEAM CONTRIBUTIONS
-% ════════════════════════════════════════════════════════════════
-\section{Team Contributions}
+Storing raw cargo metadata (manifests, inspection certificates, images)
+directly on the ledger is expensive and impractical.  Our system uses a
+\textbf{storage-agnostic integrity bridge}:
 
-\begin{table}[htbp]
+\begin{enumerate}
+  \item At creation time, \texttt{CreateShipment} accepts an
+    \texttt{offChainData} string representing cargo details.  The chaincode
+    computes $h = \text{SHA-256}(\texttt{offChainData})$ and stores only the
+    32-byte hex digest in the \texttt{dataHash} field.  The raw data is
+    \emph{never} written to the ledger.
+  \item At verification time, \texttt{VerifyShipment} recomputes the hash of
+    the presented data and compares it against the stored digest.  Any
+    mismatch proves tampering with mathematical certainty.
+\end{enumerate}
+
+This design is deliberately \textbf{storage-agnostic}: the raw cargo data
+can reside in IPFS \cite{ipfs}, an encrypted relational database (PostgreSQL,
+MySQL), a cloud object store (S3, GCS, Azure Blob), or any other off-chain
+medium.  The integrity guarantee is entirely independent of storage location
+--- it holds as long as the same bytes produce the same hash.  SHA-256
+collision resistance ensures that even a single-character change produces a
+completely different 256-bit digest, making undetected tampering
+computationally infeasible.
+
+When IPFS is used as the off-chain store, the system gains a second
+independent integrity layer: the IPFS content identifier (CID) cryptographically
+identifies the file retrieved from the network, while \texttt{dataHash}
+proves it matches what the shipment creator declared at creation time.
+Migrating to IPFS requires no chaincode changes --- only the off-chain
+storage backend changes while the on-chain interface remains identical.
+
+The \texttt{RecordDocument} chaincode function and its REST endpoint
+\texttt{POST /api/shipments/:id/documents} implement a full document
+anchoring workflow: the API layer computes the SHA-256 digest of the
+submitted document, uploads it to the local IPFS node (Kubo, running in
+Docker), and calls \texttt{RecordDocument} with both the IPFS CID and the
+hash.  The chaincode records a \texttt{DOCUMENT} event linking the shipment
+to the immutable off-chain file.  Verifiers can retrieve the file from any
+IPFS gateway and confirm the hash matches the on-chain record, proving
+the document has not been altered since it was anchored.
+
+\subsection{Simulated IoT Telemetry and Device Registry}
+
+IoT device integration is implemented in two stages.  First,
+\texttt{RegisterDevice} allows the current shipment holder to authorize
+a physical sensor for a shipment, storing a \texttt{DeviceRecord} under
+composite key \texttt{DEVICE/\{shipmentID\}/\{deviceID\}} with the device
+type (one of \texttt{temperature-sensor}, \texttt{humidity-sensor},
+\texttt{gps-tracker}, \texttt{pressure-sensor}, or \texttt{shock-sensor})
+and the registering organization.  Second, \texttt{RecordTelemetry} now
+requires a \texttt{deviceID} parameter and validates it against the
+device registry before accepting a reading --- unregistered device
+submissions are rejected at the chaincode layer.  This prevents rogue
+data injection: only devices explicitly authorized on-chain for that
+shipment may post readings.  Readings are recorded as immutable
+\texttt{TELEMETRY} events with sensor type, value, unit, and location.
+The REST endpoints \texttt{POST /api/shipments/:id/devices} and
+\texttt{POST /api/shipments/:id/telemetry} expose both operations.
+
+This supports cold-chain pharmaceutical shipments where temperature
+excursions must be immutably logged as chain-of-evidence for FDA DSCSA
+compliance, or fragile-goods logistics where shock events must be attributed
+to a specific custody window for insurance claims.  Each reading is
+timestamped by the Fabric orderer (not the submitting client) and permanently
+associated with the submitting organization's MSP identity, preventing
+retroactive falsification.
+
+\subsection{REST API and Browser Dashboard}
+
+The Node.js/Express API exposes 13 endpoints covering all chaincode
+operations, including the three new endpoints added for IPFS document
+anchoring (\texttt{POST /documents}), IoT device registration
+(\texttt{POST /devices}), and paginated shipment listing
+(\texttt{GET /shipments?pageSize=N\&bookmark=...}).  A single-page browser
+dashboard served at \texttt{/} provides a visual interface with real-time
+auto-refresh, color-coded status badges, form-based operations for all
+endpoints, and toast notifications.  All blockchain interaction passes
+through the REST API, keeping the browser client stateless with respect to
+the Fabric network.
+
+\section{Results}
+
+The system was deployed on a local Hyperledger Fabric 2.5 test network.
+All 18 unit tests pass, including edge cases for duplicate shipment IDs,
+unauthorized transfers, invalid status transitions, terminal-state locking,
+tampered hash detection, duplicate device registration rejection,
+unregistered device telemetry rejection, and IPFS document CID recording.
+End-to-end functional verification confirmed correct behavior for: shipment
+creation with hash storage; multi-hop custody transfer and RBAC enforcement;
+hash verification (both match and deliberate mismatch); IoT device
+registration and authenticated telemetry recording; IPFS document anchoring
+with SHA-256 integrity verification; paginated shipment listing; immutable
+history retrieval; and dynamic participant authorization and revocation.
+All unauthorized operations returned structured error messages identifying
+the violated constraint.
+
+\section{Analysis}
+
+\subsection{Scalability}
+
+Hyperledger Fabric separates transaction execution (endorsement) from
+ordering and validation, enabling throughput of 2,000--3,000+ TPS
+\cite{fabricdocs} versus Bitcoin ($\sim$7 TPS) and Ethereum ($\sim$30 TPS).
+A large retailer processing one million transactions per day generates
+$\sim$12 TPS --- well within Fabric's envelope.  The current deployment uses
+a single orderer, a single point of failure; production requires a 3- or
+5-node Raft cluster.
+
+\subsection{Transaction Cost}
+
+Hyperledger Fabric has no gas fees.  Infrastructure costs for two peer
+nodes, one orderer, and two CouchDB instances on \texttt{t3.medium} AWS
+instances total approximately \$105/month.  A comparable Ethereum deployment
+with 10,000 custody transfers/month at 21,000 gas each at 30 gwei costs
+\$180--\$900/month in gas alone, excluding infrastructure.
+
+\subsection{Data Management}
+
+Each shipment record occupies approximately 800~bytes on-chain.  CouchDB
+provides fast world-state queries; the Fabric ledger provides the immutable
+full history.  \texttt{GetAllShipments()} performs a full table scan for
+small deployments; the production-grade \texttt{GetShipmentsPaginated()}
+function uses \texttt{GetQueryResultWithPagination} with CouchDB bookmarks,
+returning page-sized result sets and a continuation cursor that avoids
+full table scans at scale.
+
+\subsection{Privacy and Regulatory Considerations}
+
+The prototype stores all shipment data on a shared channel visible to all
+members.  Production deployment would use Fabric Private Data Collections
+(PDC) for selective sharing.  The system stores only MSP IDs, not personal
+data, which is GDPR-compliant by design.  The immutable ledger satisfies
+audit requirements under FDA DSCSA, USDA FSMA, and international customs
+regulations without a separate audit system.
+
+\subsection{Comparison to Traditional Systems}
+
+Table~\ref{tab:comparison} contrasts our system with traditional approaches.
+The blockchain system trades setup complexity for cryptographic proof:
+custody transfers are digitally signed, timestamps are orderer-assigned and
+non-repudiable, and \texttt{GetShipmentHistory()} resolves disputes in under
+one second with court-admissible evidence.
+
+\begin{table}[h]
+\caption{Blockchain vs.\ Traditional Supply Chain Systems}
+\label{tab:comparison}
 \centering
-\caption{Individual team member contributions.}
-\scriptsize
-\begin{tabularx}{\columnwidth}{lX}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}lll@{}}
 \toprule
-\textbf{Member} & \textbf{Contributions} \\
+\textbf{Dimension} & \textbf{Traditional DB} & \textbf{This System} \\
 \midrule
-D. Agnello  & System architecture, repository setup, smart contract design and core implementation, Docker orchestration \\
-R. Abrol    & Fabric network configuration, Docker Compose, channel and crypto-config YAMLs, deployment scripts \\
-V. Patel    & Node.js REST client application, Fabric SDK v2 integration, admin enrollment and user registration scripts \\
-S. Nanda    & Unit test strategy, mock X.509 identity injection, all 15 test cases, report writing, quantitative analysis \\
-A. Bhure    & Literature review, prior work synthesis, regulatory compliance analysis, documentation, presentation \\
+Trust model         & Trust the operator  & Cryptographic proof \\
+Record mutability   & Admin can modify    & Tamper-evident \\
+Dispute resolution  & Manual, days        & History query $<$1\,s \\
+Audit trail         & Optional            & Always-on, signed \\
+Multi-party coord.  & EDI agreements      & Shared ledger \\
+Transaction cost    & Low (infra only)    & No gas fees \\
+Peak throughput     & Very high           & 3{,}000+ TPS \\
+Setup complexity    & Low                 & Medium \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
-% ════════════════════════════════════════════════════════════════
-%  REFERENCES
-% ════════════════════════════════════════════════════════════════
-\balance
-\begin{thebibliography}{10}
+\section{Future Work}
+
+Priority enhancements include: dedicated peer nodes for WarehouseMSP,
+RetailerMSP, and RecipientMSP; Fabric Private Data Collections; actual IPFS
+document storage (the SHA-256 bridge already provides the correct interface
+--- only the off-chain backend changes); a 3-node Raft orderer cluster; real
+IoT hardware integration via authenticated MQTT gateways; and
+bookmark-based pagination for \texttt{GetAllShipments()}.
+
+\section{Contributions}
+
+\begin{itemize}
+  \item \textbf{Dominick Agnello:} Network architecture, Docker Compose
+    configuration, Fabric network lifecycle scripting.
+  \item \textbf{Ritish Abrol:} Smart contract functions
+    (\texttt{TransferCustody}, \texttt{AuthorizeParticipant},
+    \texttt{RevokeParticipant}), unit tests.
+  \item \textbf{Vatsal Patel:} Chaincode implementation
+    (\texttt{CreateShipment}, \texttt{UpdateShipmentStatus},
+    \texttt{GetShipmentHistory}), SHA-256 hashing logic.
+  \item \textbf{Shashikant Nanda:} REST API, Fabric SDK integration, wallet
+    management, IoT telemetry endpoint.
+  \item \textbf{Anushree Bhure:} Technical report, system architecture
+    diagrams, literature review, analysis section.
+\end{itemize}
+
+All members participated in system integration, testing, and demo preparation.
+
+\section{Conclusion}
+
+We presented a fully deployed Hyperledger Fabric 2.5 shipment tracking
+system that records every supply chain event as an immutable, digitally
+signed ledger entry.  The combination of RBAC, a storage-agnostic SHA-256
+off-chain integrity bridge, and IoT telemetry logging demonstrates how
+blockchain converts supply chain trust from a human coordination problem
+into a mathematical guarantee.  The system is portable via a single
+\texttt{./start.sh} script and accessible through both a REST API and a
+browser dashboard.
+
+\begin{thebibliography}{00}
 
 \bibitem{shakhbulatov2020}
-D.~Shakhbulatov, J.~Medina, Z.~Dong and R.~Rojas-Cessa,
+D.~Shakhbulatov, J.~Medina, Z.~Dong, and R.~Rojas-Cessa,
 ``How Blockchain Enhances Supply Chain Management: A Survey,''
-\textit{IEEE Open Journal of the Computer Society},
-vol.~1, pp.~230--249, 2020.
+\textit{IEEE Open J.\ Comput.\ Soc.}, vol.~1, pp.~230--249, 2020.
 
 \bibitem{oguz2024}
-S.~O\u{g}uz, G.~Alkan, B.~Yilmaz and C.~Kocaba\c{s},
+S.~\"{O}g\"{u}z, G.~Alkan, B.~Yilmaz, and C.~Kocaba\c{s},
 ``The Use of Blockchain Technology in Logistics and Supply Chain
-Management: A Systematic Review,''
+Management (SCM): A Systematic Review,''
 \textit{IEEE Access}, vol.~12, pp.~166211--166224, 2024.
 
 \bibitem{gonczol2020}
-P.~Gonczol, P.~Katsikouli, L.~Herskind and N.~Dragoni,
+P.~Gonczol, P.~Katsikouli, L.~Herskind, and N.~Dragoni,
 ``Blockchain Implementations and Use Cases for Supply Chains---A Survey,''
 \textit{IEEE Access}, vol.~8, pp.~11856--11871, 2020.
 
-\bibitem{wang2019}
-S.~Wang, D.~Li, Y.~Zhang and J.~Chen,
-``Smart Contract-Based Product Traceability System in the Supply Chain
-Scenario,''
-\textit{IEEE Access}, vol.~7, pp.~115122--115133, 2019.
-
-\bibitem{tian2017}
-F.~Tian,
-``A Supply Chain Traceability System for Food Safety Based on HACCP,
-Blockchain and Internet of Things,''
-in \textit{Proc.\ 14th IEEE Intl.\ Conf.\ on Service Systems and
-Service Management (ICSSSM)}, 2017, pp.~1--6.
-
-\bibitem{kshetri2018}
-N.~Kshetri,
-``1 Blockchain's Roles in Meeting Key Supply Chain Management Objectives,''
-\textit{International Journal of Information Management},
-vol.~39, pp.~80--89, 2018.
-
-\bibitem{maesa2019}
-D.~D.~F.~Maesa and P.~Mori,
-``Blockchain 3.0 Applications Survey,''
-\textit{Journal of Parallel and Distributed Computing},
-vol.~138, pp.~99--114, 2020.
-
 \bibitem{fabricdocs}
-Hyperledger Fabric Documentation,
-\url{https://hyperledger-fabric.readthedocs.io/}, accessed May 2026.
+Hyperledger Fabric Documentation, 2024.
+[Online]. Available: \url{https://hyperledger-fabric.readthedocs.io/}
 
-\bibitem{fabricapi}
-Hyperledger Fabric Contract API for Go,
-\url{https://pkg.go.dev/github.com/hyperledger/fabric-contract-api-go},
-accessed May 2026.
+\bibitem{contractapi}
+Hyperledger Fabric Contract API for Go, 2024.
+[Online]. Available: \url{https://pkg.go.dev/github.com/hyperledger/fabric-contract-api-go}
 
-\bibitem{docker}
-Docker Documentation, \url{https://docs.docker.com/}, accessed May 2026.
+\bibitem{ipfs}
+J.~Benet,
+``IPFS---Content Addressed, Versioned, P2P File System,''
+\textit{arXiv preprint arXiv:1407.3561}, 2014.
 
 \end{thebibliography}
 

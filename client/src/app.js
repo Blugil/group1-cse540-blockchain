@@ -1,9 +1,5 @@
 /*
- * Shipment Tracking Client Application
- * ======================================
- * Express.js REST API that interacts with the Hyperledger Fabric network
- * to manage shipments through the full supply chain lifecycle.
- *
+ * Express REST API for the shipment tracking chaincode.
  * CSE 540 – Spring B 2026 | Group 1
  */
 
@@ -13,28 +9,17 @@ const express = require('express');
 const { Gateway, Wallets } = require('fabric-network');
 const path = require('path');
 const fs = require('fs');
+const { ccpPath } = require('./fabricConfig');
+const { addToIPFS, computeSHA256, getIPFSGatewayURL } = require('./ipfsClient');
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const PORT = process.env.PORT || 3000;
 const CHANNEL_NAME = 'shipchannel';
 const CHAINCODE_NAME = 'shipment';
 
-// ============================================================
-// Connection profile path
-// ============================================================
-const ccpPath = path.resolve(
-  '/Users/anushreebhure/fabric-install/fabric-samples/test-network',
-  'organizations',
-  'peerOrganizations',
-  'org1.example.com',
-  'connection-org1.json'
-);
-
-// ============================================================
-// Helper: Connect to the Fabric gateway
-// ============================================================
 async function connectToGateway(userId = 'appUser') {
   const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
   const walletPath = path.join(__dirname, '..', 'wallet');
@@ -59,10 +44,6 @@ async function connectToGateway(userId = 'appUser') {
 
   return { gateway, contract };
 }
-
-// ============================================================
-// REST API Endpoints
-// ============================================================
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -109,13 +90,24 @@ app.get('/api/shipments/:id', async (req, res) => {
   }
 });
 
-// GET /api/shipments — Get all shipments
+// GET /api/shipments — Get all shipments (paginated if ?pageSize= is provided)
 app.get('/api/shipments', async (req, res) => {
   try {
     const { gateway, contract } = await connectToGateway();
+    const { pageSize, bookmark } = req.query;
+
+    if (pageSize) {
+      const result = await contract.evaluateTransaction(
+        'GetShipmentsPaginated',
+        String(pageSize),
+        bookmark || ''
+      );
+      gateway.disconnect();
+      return res.json(JSON.parse(result.toString()));
+    }
+
     const result = await contract.evaluateTransaction('GetAllShipments');
     gateway.disconnect();
-
     res.json(JSON.parse(result.toString()));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -230,9 +222,88 @@ app.delete('/api/shipments/:id/participants/:participant', async (req, res) => {
   }
 });
 
-// ============================================================
-// Start server
-// ============================================================
+// POST /api/shipments/:id/devices — Register an IoT device for a shipment
+app.post('/api/shipments/:id/devices', async (req, res) => {
+  try {
+    const { deviceID, deviceType } = req.body;
+
+    if (!deviceID || !deviceType) {
+      return res.status(400).json({ error: 'Missing required fields: deviceID, deviceType' });
+    }
+
+    const { gateway, contract } = await connectToGateway();
+    await contract.submitTransaction('RegisterDevice', req.params.id, deviceID, deviceType);
+
+    gateway.disconnect();
+    res.json({ message: `Device ${deviceID} (${deviceType}) registered for shipment ${req.params.id}` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/shipments/:id/telemetry — Record a simulated IoT sensor reading
+// Requires the device to be pre-registered via POST /api/shipments/:id/devices
+app.post('/api/shipments/:id/telemetry', async (req, res) => {
+  try {
+    const { deviceID, sensorType, value, unit, location } = req.body;
+
+    if (!deviceID || !sensorType || value === undefined) {
+      return res.status(400).json({ error: 'Missing required fields: deviceID, sensorType, value' });
+    }
+
+    const { gateway, contract } = await connectToGateway();
+    await contract.submitTransaction(
+      'RecordTelemetry',
+      req.params.id,
+      deviceID,
+      sensorType,
+      String(value),
+      unit || '',
+      location || ''
+    );
+
+    gateway.disconnect();
+    res.json({ message: `Telemetry recorded for shipment ${req.params.id}: ${sensorType}=${value}${unit || ''}` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/shipments/:id/documents — Upload a document to IPFS and record CID + hash on-chain
+app.post('/api/shipments/:id/documents', async (req, res) => {
+  try {
+    const { content, docType, description } = req.body;
+
+    if (!content || !docType) {
+      return res.status(400).json({ error: 'Missing required fields: content, docType' });
+    }
+
+    const docHash = computeSHA256(content);
+    const { cid } = await addToIPFS(content);
+    const gatewayURL = getIPFSGatewayURL(cid);
+
+    const { gateway, contract } = await connectToGateway();
+    await contract.submitTransaction(
+      'RecordDocument',
+      req.params.id,
+      cid,
+      docHash,
+      docType,
+      description || ''
+    );
+
+    gateway.disconnect();
+    res.status(201).json({
+      message: `Document recorded for shipment ${req.params.id}`,
+      cid,
+      hash: docHash,
+      gateway: gatewayURL
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`\n========================================`);
   console.log(`  Shipment Tracking API`);

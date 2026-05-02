@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shipment Tracking — Blockchain Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%);
+      border-bottom: 1px solid #2d3748;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header .logo {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    header p  { font-size: 13px; color: #718096; margin-top: 2px; }
+    header .badge {
+      margin-left: auto;
+      background: #1a2a1a;
+      border: 1px solid #2d6a2d;
+      color: #68d391;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    header .badge::before {
+      content: '';
+      width: 7px; height: 7px;
+      background: #68d391;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+    }
+    .left  { display: flex; flex-direction: column; gap: 24px; }
+    .right { display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── Card ── */
+    .card {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 14px;
+      padding: 20px 22px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #a0aec0;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-title button {
+      background: #2d3748;
+      border: none;
+      color: #a0aec0;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .card-title button:hover { background: #3d4a5c; color: #e2e8f0; }
+
+    /* ── Shipment list ── */
+    .shipment-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .shipment-row {
+      background: #151a27;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+    }
+    .shipment-row:hover { border-color: #4a5568; background: #1c2133; }
+    .shipment-row.selected { border-color: #667eea; background: #1c2133; }
+    .ship-id   { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+    .ship-meta { font-size: 12px; color: #718096; display: flex; gap: 12px; flex-wrap: wrap; }
+    .ship-meta span { display: flex; align-items: center; gap: 4px; }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .status-Created      { background: #1a2a3a; color: #63b3ed; border: 1px solid #2c4a6a; }
+    .status-InTransit    { background: #2a2a1a; color: #f6e05e; border: 1px solid #5a4a1a; }
+    .status-InWarehouse  { background: #1a2a2a; color: #4fd1c5; border: 1px solid #1a4a4a; }
+    .status-WithRetailer { background: #2a1a2a; color: #d6bcfa; border: 1px solid #4a2a6a; }
+    .status-Delivered    { background: #1a2a1a; color: #68d391; border: 1px solid #2a5a2a; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #4a5568;
+      font-size: 14px;
+    }
+
+    /* ── Detail panel ── */
+    .detail-field { margin-bottom: 12px; }
+    .detail-field label { font-size: 11px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+    .detail-field value { font-size: 13px; color: #e2e8f0; word-break: break-all; }
+    .hash-value { font-family: monospace; font-size: 11px; color: #a0aec0; }
+
+    .participants { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .participant-tag {
+      background: #2d3748;
+      border: 1px solid #4a5568;
+      color: #a0aec0;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    /* ── Event history ── */
+    .event-list { display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; }
+    .event-item {
+      border-left: 3px solid #4a5568;
+      padding: 8px 12px;
+      background: #151a27;
+      border-radius: 0 8px 8px 0;
+    }
+    .event-item.CREATE          { border-left-color: #63b3ed; }
+    .event-item.STATUS_UPDATE   { border-left-color: #f6e05e; }
+    .event-item.CUSTODY_TRANSFER{ border-left-color: #9f7aea; }
+    .event-item.AUTHORIZE       { border-left-color: #68d391; }
+    .event-item.REVOKE          { border-left-color: #fc8181; }
+    .event-type  { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .event-notes { font-size: 12px; color: #a0aec0; }
+    .event-time  { font-size: 11px; color: #4a5568; margin-top: 3px; }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 12px; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #a0aec0;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      background: #151a27;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      color: #e2e8f0;
+      padding: 9px 12px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: #667eea;
+    }
+    .form-group textarea { resize: vertical; min-height: 64px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      width: 100%;
+    }
+    .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary { background: #2d3748; color: #e2e8f0; }
+    .btn-secondary:hover { background: #3d4a5c; }
+    .btn-danger { background: #742a2a; color: #fc8181; }
+    .btn-danger:hover { background: #9b2c2c; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-row { display: flex; gap: 8px; }
+    .btn-row .btn { flex: 1; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.25s;
+      max-width: 360px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { background: #1a2a1a; border: 1px solid #2d6a2d; color: #68d391; }
+    #toast.error   { background: #2a1a1a; border: 1px solid #6a2d2d; color: #fc8181; }
+    #toast.info    { background: #1a1a2a; border: 1px solid #2d2d6a; color: #90cdf4; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #718096;
+      border: 1px solid transparent;
+      background: none;
+      transition: all 0.15s;
+    }
+    .tab.active { background: #2d3748; color: #e2e8f0; border-color: #4a5568; }
+    .tab:hover:not(.active) { color: #a0aec0; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Verify result ── */
+    .verify-result {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+    }
+    .verify-result.ok    { background: #1a2a1a; color: #68d391; border: 1px solid #2d6a2d; }
+    .verify-result.fail  { background: #2a1a1a; color: #fc8181; border: 1px solid #6a2d2d; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #1a1f2e; }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+
+    .loading { color: #4a5568; font-size: 13px; padding: 12px 0; }
+    .no-selection { color: #4a5568; font-size: 13px; text-align: center; padding: 30px 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⛓</div>
+  <div>
+    <h1>Shipment Tracking</h1>
+    <p>Hyperledger Fabric · CSE 540 Group 1</p>
+  </div>
+  <div class="badge" id="networkBadge">Network Live</div>
+</header>
+
+<div class="container">
+
+  <!-- LEFT COLUMN -->
+  <div class="left">
+
+    <!-- Shipment list -->
+    <div class="card">
+      <div class="card-title">
+        Active Shipments
+        <button onclick="loadShipments()">↻ Refresh</button>
+      </div>
+      <div class="shipment-grid" id="shipmentList">
+        <div class="loading">Loading shipments…</div>
+      </div>
+    </div>
+
+    <!-- Selected shipment detail + history -->
+    <div class="card" id="detailCard" style="display:none">
+      <div class="card-title" id="detailTitle">Shipment Detail</div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('detail')">Details</button>
+        <button class="tab"        onclick="switchTab('history')">Event History</button>
+        <button class="tab"        onclick="switchTab('verify')">Verify</button>
+      </div>
+
+      <!-- Details tab -->
+      <div class="tab-content active" id="tab-detail">
+        <div id="detailBody"></div>
+      </div>
+
+      <!-- History tab -->
+      <div class="tab-content" id="tab-history">
+        <div class="event-list" id="historyList">
+          <div class="loading">Loading history…</div>
+        </div>
+      </div>
+
+      <!-- Verify tab -->
+      <div class="tab-content" id="tab-verify">
+        <div class="form-group">
+          <label>Off-chain cargo data to verify</label>
+          <textarea id="verifyData" placeholder="weight:30kg,volume:2cbm,count:100,contents:electronics"></textarea>
+        </div>
+        <button class="btn btn-secondary" onclick="verifyShipment()">Verify Integrity</button>
+        <div class="verify-result" id="verifyResult"></div>
+      </div>
+    </div>
+
+    <div id="noSelection" class="card">
+      <div class="no-selection">← Select a shipment to view details and history</div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="right">
+
+    <!-- Create shipment -->
+    <div class="card">
+      <div class="card-title">Create Shipment</div>
+      <div class="form-group">
+        <label>Shipment ID</label>
+        <input id="newId" placeholder="SHIP-DEMO-01" />
+      </div>
+      <div class="form-group">
+        <label>Origin</label>
+        <input id="newOrigin" placeholder="Factory-Phoenix-AZ" />
+      </div>
+      <div class="form-group">
+        <label>Destination</label>
+        <input id="newDest" placeholder="Store-New-York-NY" />
+      </div>
+      <div class="form-group">
+        <label>Participants (comma-separated MSP IDs)</label>
+        <input id="newParticipants" value="Org1MSP,Org2MSP" />
+      </div>
+      <div class="form-group">
+        <label>Off-chain cargo data (hashed on-chain)</label>
+        <textarea id="newOffChain" placeholder="weight:30kg,volume:2cbm,count:100,contents:electronics"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="createShipment()">Create Shipment</button>
+    </div>
+
+    <!-- Update status -->
+    <div class="card">
+      <div class="card-title">Update Status</div>
+      <div class="form-group">
+        <label>Shipment ID</label>
+        <input id="statusId" placeholder="SHIP-DEMO-01" />
+      </div>
+      <div class="form-group">
+        <label>New Status</label>
+        <select id="statusVal">
+          <option>Created</option>
+          <option selected>InTransit</option>
+          <option>InWarehouse</option>
+          <option>WithRetailer</option>
+          <option>Delivered</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Location</label>
+        <input id="statusLocation" placeholder="Loading-Dock-Phoenix" />
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <input id="statusNotes" placeholder="Picked up by driver" />
+      </div>
+      <button class="btn btn-secondary" onclick="updateStatus()">Update Status</button>
+    </div>
+
+    <!-- Transfer custody -->
+    <div class="card">
+      <div class="card-title">Transfer Custody</div>
+      <div class="form-group">
+        <label>Shipment ID</label>
+        <input id="transferId" placeholder="SHIP-DEMO-01" />
+      </div>
+      <div class="form-group">
+        <label>New Holder MSP ID</label>
+        <input id="transferHolder" placeholder="Org2MSP" />
+      </div>
+      <button class="btn btn-secondary" onclick="transferCustody()">Transfer</button>
+    </div>
+
+    <!-- Authorize / Revoke participant -->
+    <div class="card">
+      <div class="card-title">Manage Participants</div>
+      <div class="form-group">
+        <label>Shipment ID</label>
+        <input id="partId" placeholder="SHIP-DEMO-01" />
+      </div>
+      <div class="form-group">
+        <label>Participant MSP ID</label>
+        <input id="partMsp" placeholder="Org3MSP" />
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="authorizeParticipant()">Authorize</button>
+        <button class="btn btn-danger"    onclick="revokeParticipant()">Revoke</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const API = '';
+  let selectedId = null;
+
+  // ── Utilities ──────────────────────────────────────────────
+
+  function toast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ''; }, 3500);
+  }
+
+  async function api(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API + path, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  }
+
+  function statusClass(s) {
+    return `status-badge status-${s.replace(/\s/g,'')}`;
+  }
+
+  function fmt(iso) {
+    return new Date(iso).toLocaleString();
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      const names = ['detail','history','verify'];
+      t.classList.toggle('active', names[i] === name);
+    });
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'history' && selectedId) loadHistory(selectedId);
+  }
+
+  // ── Shipment list ──────────────────────────────────────────
+
+  async function loadShipments() {
+    const el = document.getElementById('shipmentList');
+    el.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+      const ships = await api('GET', '/api/shipments');
+      if (!ships || ships.length === 0) {
+        el.innerHTML = '<div class="empty-state">No shipments on the ledger yet</div>';
+        return;
+      }
+      el.innerHTML = ships.map(s => `
+        <div class="shipment-row ${s.shipmentID === selectedId ? 'selected' : ''}"
+             onclick="selectShipment('${s.shipmentID}')">
+          <div>
+            <div class="ship-id">${s.shipmentID}</div>
+            <div class="ship-meta">
+              <span>📦 ${s.origin} → ${s.destination}</span>
+              <span>👤 ${s.currentHolder}</span>
+            </div>
+          </div>
+          <span class="${statusClass(s.status)}">${s.status}</span>
+        </div>
+      `).join('');
+    } catch(e) {
+      el.innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+    }
+  }
+
+  async function selectShipment(id) {
+    selectedId = id;
+    document.querySelectorAll('.shipment-row').forEach(r => {
+      r.classList.toggle('selected', r.querySelector('.ship-id').textContent === id);
+    });
+
+    document.getElementById('detailCard').style.display = 'block';
+    document.getElementById('noSelection').style.display = 'none';
+    document.getElementById('detailTitle').textContent = id;
+
+    // pre-fill action forms
+    ['statusId','transferId','partId'].forEach(fid => {
+      document.getElementById(fid).value = id;
+    });
+
+    switchTab('detail');
+    await loadDetail(id);
+  }
+
+  async function loadDetail(id) {
+    const body = document.getElementById('detailBody');
+    body.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+      const s = await api('GET', `/api/shipments/${id}`);
+      body.innerHTML = `
+        <div class="detail-field">
+          <label>Status</label>
+          <value><span class="${statusClass(s.status)}">${s.status}</span></value>
+        </div>
+        <div class="detail-field">
+          <label>Current Holder</label>
+          <value>${s.currentHolder}</value>
+        </div>
+        <div class="detail-field">
+          <label>Origin → Destination</label>
+          <value>${s.origin} → ${s.destination}</value>
+        </div>
+        <div class="detail-field">
+          <label>Participants</label>
+          <div class="participants">
+            ${s.participants.map(p => `<span class="participant-tag">${p}</span>`).join('')}
+          </div>
+        </div>
+        <div class="detail-field">
+          <label>Data Hash (SHA-256)</label>
+          <value class="hash-value">${s.dataHash}</value>
+        </div>
+        <div class="detail-field">
+          <label>Created</label>
+          <value>${fmt(s.createdAt)}</value>
+        </div>
+        <div class="detail-field">
+          <label>Last Updated</label>
+          <value>${fmt(s.updatedAt)}</value>
+        </div>
+      `;
+    } catch(e) {
+      body.innerHTML = `<div class="empty-state">${e.message}</div>`;
+    }
+  }
+
+  async function loadHistory(id) {
+    const el = document.getElementById('historyList');
+    el.innerHTML = '<div class="loading">Loading…</div>';
+    try {
+      const events = await api('GET', `/api/shipments/${id}/history`);
+      if (!events || events.length === 0) {
+        el.innerHTML = '<div class="empty-state">No events recorded yet</div>';
+        return;
+      }
+      el.innerHTML = events.map(e => `
+        <div class="event-item ${e.eventType}">
+          <div class="event-type">${e.eventType}</div>
+          <div class="event-notes">${e.notes || '—'}</div>
+          <div class="event-time">${fmt(e.timestamp)} · ${e.actor}${e.location ? ' · ' + e.location : ''}</div>
+        </div>
+      `).join('');
+    } catch(e) {
+      el.innerHTML = `<div class="empty-state">${e.message}</div>`;
+    }
+  }
+
+  // ── Actions ────────────────────────────────────────────────
+
+  async function createShipment() {
+    const id           = document.getElementById('newId').value.trim();
+    const origin       = document.getElementById('newOrigin').value.trim();
+    const destination  = document.getElementById('newDest').value.trim();
+    const partInput    = document.getElementById('newParticipants').value.trim();
+    const offChainData = document.getElementById('newOffChain').value.trim();
+
+    if (!id || !origin || !destination || !partInput) {
+      return toast('Fill in all required fields', 'error');
+    }
+    const participants = partInput.split(',').map(s => s.trim()).filter(Boolean);
+
+    try {
+      await api('POST', '/api/shipments', { shipmentID: id, origin, destination, participants, offChainData });
+      toast(`Shipment ${id} created`, 'success');
+      loadShipments();
+    } catch(e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  async function updateStatus() {
+    const id       = document.getElementById('statusId').value.trim();
+    const status   = document.getElementById('statusVal').value;
+    const location = document.getElementById('statusLocation').value.trim();
+    const notes    = document.getElementById('statusNotes').value.trim();
+    if (!id) return toast('Enter a shipment ID', 'error');
+    try {
+      await api('PUT', `/api/shipments/${id}/status`, { status, location, notes });
+      toast(`Status updated to ${status}`, 'success');
+      if (selectedId === id) { await loadDetail(id); loadHistory(id); }
+      loadShipments();
+    } catch(e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  async function transferCustody() {
+    const id        = document.getElementById('transferId').value.trim();
+    const newHolder = document.getElementById('transferHolder').value.trim();
+    if (!id || !newHolder) return toast('Enter shipment ID and new holder', 'error');
+    try {
+      await api('PUT', `/api/shipments/${id}/transfer`, { newHolder });
+      toast(`Custody transferred to ${newHolder}`, 'success');
+      if (selectedId === id) { await loadDetail(id); loadHistory(id); }
+      loadShipments();
+    } catch(e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  async function authorizeParticipant() {
+    const id          = document.getElementById('partId').value.trim();
+    const participant = document.getElementById('partMsp').value.trim();
+    if (!id || !participant) return toast('Enter shipment ID and MSP ID', 'error');
+    try {
+      await api('POST', `/api/shipments/${id}/participants`, { participant });
+      toast(`${participant} authorized`, 'success');
+      if (selectedId === id) loadDetail(id);
+    } catch(e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  async function revokeParticipant() {
+    const id          = document.getElementById('partId').value.trim();
+    const participant = document.getElementById('partMsp').value.trim();
+    if (!id || !participant) return toast('Enter shipment ID and MSP ID', 'error');
+    try {
+      await api('DELETE', `/api/shipments/${id}/participants/${participant}`);
+      toast(`${participant} revoked`, 'success');
+      if (selectedId === id) loadDetail(id);
+    } catch(e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  async function verifyShipment() {
+    const data = document.getElementById('verifyData').value.trim();
+    const res  = document.getElementById('verifyResult');
+    if (!selectedId) return toast('Select a shipment first', 'error');
+    if (!data) return toast('Enter cargo data to verify', 'error');
+    try {
+      const r = await api('GET', `/api/shipments/${selectedId}/verify?offChainData=${encodeURIComponent(data)}`);
+      res.style.display = 'block';
+      res.className = 'verify-result ok';
+      res.textContent = '✓ Data integrity verified — hash matches';
+    } catch(e) {
+      res.style.display = 'block';
+      res.className = 'verify-result fail';
+      res.textContent = '✗ ' + e.message;
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+
+  loadShipments();
+  setInterval(loadShipments, 15000);
+</script>
+</body>
+</html>

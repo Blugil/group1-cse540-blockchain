@@ -1,8 +1,7 @@
 /*
- * Enroll Admin User
- * =================
- * Enrolls the admin user with the Fabric CA and stores
- * the credentials in the local wallet.
+ * Enrolls the admin user with the Fabric CA and saves the credentials to the local wallet.
+ * Only needed when using a Fabric CA (not cryptogen). With the test-network, run
+ * importCryptoIdentity.js instead.
  */
 
 'use strict';
@@ -11,24 +10,13 @@ const FabricCAServices = require('fabric-ca-client');
 const { Wallets } = require('fabric-network');
 const fs = require('fs');
 const path = require('path');
+const { ccpPath } = require('./fabricConfig');
 
 async function main() {
   try {
-    // Load connection profile
-    const ccpPath = path.resolve(
-      __dirname,
-      '..',
-      '..',
-      'network',
-      'organizations',
-      'peerOrganizations',
-      'manufacturer.shipment.com',
-      'connection-manufacturer.json'
-    );
     const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
 
-    // Create CA client
-    const caInfo = ccp.certificateAuthorities['ca.manufacturer.shipment.com'];
+    const caInfo = ccp.certificateAuthorities['ca.org1.example.com'];
     const caTLSCACerts = caInfo.tlsCACerts.pem;
     const ca = new FabricCAServices(
       caInfo.url,
@@ -36,19 +24,16 @@ async function main() {
       caInfo.caName
     );
 
-    // Create wallet
     const walletPath = path.join(__dirname, '..', 'wallet');
     const wallet = await Wallets.newFileSystemWallet(walletPath);
     console.log(`Wallet path: ${walletPath}`);
 
-    // Check if admin already enrolled
     const identity = await wallet.get('admin');
     if (identity) {
       console.log('Admin user already exists in the wallet');
       return;
     }
 
-    // Enroll admin
     const enrollment = await ca.enroll({
       enrollmentID: 'admin',
       enrollmentSecret: 'adminpw',
@@ -59,7 +44,7 @@ async function main() {
         certificate: enrollment.certificate,
         privateKey: enrollment.key.toBytes(),
       },
-      mspId: 'ManufacturerMSP',
+      mspId: 'Org1MSP',
       type: 'X.509',
     };
 

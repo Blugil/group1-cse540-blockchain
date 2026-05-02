@@ -137,51 +137,29 @@ git clone https://github.com/Blugil/group1-cse540-blockchain.git
 cd group1-cse540-blockchain
 ```
 
-### Step 3: Start the Network
+### Step 3: Start Everything
 
 ```bash
-cd network/
-chmod +x network.sh scripts/*.sh
-
-# Start the network and create the channel
-./network.sh up createChannel -c shipchannel
+# From the project root — starts the network, deploys chaincode, and launches the API
+./start.sh
 ```
 
-### Step 4: Deploy Chaincode
+This single script:
+1. Starts the Fabric test-network (2 orgs, CouchDB)
+2. Builds and deploys the chaincode via CCaaS (no Docker-in-Docker required)
+3. Imports crypto identities into the SDK wallet
+4. Starts the REST API + dashboard on http://localhost:3000
+
+> **Node.js version:** `fabric-network` 2.2.x requires Node 18. If your default is Node 20+, the script auto-switches via nvm. You can also set it manually: `nvm use 18`.
+
+### Step 4: Open the Dashboard
+
+Navigate to **http://localhost:3000** in your browser to use the UI, or interact via REST API directly (see endpoints below).
+
+### Tear Down
 
 ```bash
-./network.sh deployCC -c shipchannel -ccn shipment -ccp ../chaincode/shipment -ccl go
-```
-
-### Step 5: Test the Chaincode (CLI)
-
-```bash
-chmod +x scripts/testChaincode.sh
-./scripts/testChaincode.sh
-```
-
-### Step 6: Start the Client Application (Optional)
-
-```bash
-cd ../client/
-npm install
-
-# Enroll admin and register user
-npm run enroll-admin
-npm run register-user
-
-# Start the REST API server
-npm start
-
-# Run the end-to-end test workflow
-npm run test-workflow
-```
-
-### Tear Down the Network
-
-```bash
-cd network/
-./network.sh down
+./stop.sh
 ```
 
 ---

@@ -41,3 +41,7 @@ client/connection-manufacturer.json
 
 # ── Logs ──────────────────────────────────────────────────────
 *.log
+
+# ── LaTeX build artifacts ──────────────────────────────────────
+REPORT.aux
+REPORT.out
