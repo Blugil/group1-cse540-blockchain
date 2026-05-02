@@ -83,11 +83,10 @@ group1-cse540-blockchain/
 │   ├── package.json          # Node.js client dependencies
 │   └── src/
 │       ├── app.js            # Express REST API server
-│       ├── enrollAdmin.js    # Enroll Fabric CA admin
-│       ├── registerUser.js   # Register application user
-│       └── testWorkflow.js   # End-to-end test workflow
+│       ├── fabricConfig.js   # Fabric connection profile resolver
+│       ├── ipfsClient.js     # IPFS upload and SHA-256 utilities
+│       └── importCryptoIdentity.js  # Wallet identity importer
 ├── network/
-│   ├── network.sh            # Network lifecycle management script
 │   ├── configtx/
 │   │   └── configtx.yaml     # Channel configuration
 │   ├── docker/
