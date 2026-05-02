@@ -1,0 +1,157 @@
+# Channel configuration for the Shipment Tracking Network
+# Defines organizations, orderer, and channel policies.
+#
+# Two peer organizations are used for the test network:
+#   ManufacturerOrg (Org1) and TransporterOrg (Org2).
+# Additional organizations (Warehouse, Retailer, Recipient) can be added
+# by extending this file with more org definitions.
+
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: ../organizations/ordererOrganizations/shipment.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+    OrdererEndpoints:
+      - orderer.shipment.com:7050
+
+  - &ManufacturerOrg
+    Name: ManufacturerMSP
+    ID: ManufacturerMSP
+    MSPDir: ../organizations/peerOrganizations/manufacturer.shipment.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.admin', 'ManufacturerMSP.peer', 'ManufacturerMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.admin', 'ManufacturerMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.manufacturer.shipment.com
+        Port: 7051
+
+  - &TransporterOrg
+    Name: TransporterMSP
+    ID: TransporterMSP
+    MSPDir: ../organizations/peerOrganizations/transporter.shipment.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('TransporterMSP.admin', 'TransporterMSP.peer', 'TransporterMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('TransporterMSP.admin', 'TransporterMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('TransporterMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('TransporterMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.transporter.shipment.com
+        Port: 9051
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer.shipment.com:7050
+  EtcdRaft:
+    Consenters:
+      - Host: orderer.shipment.com
+        Port: 7050
+        ClientTLSCert: ../organizations/ordererOrganizations/shipment.com/orderers/orderer.shipment.com/tls/server.crt
+        ServerTLSCert: ../organizations/ordererOrganizations/shipment.com/orderers/orderer.shipment.com/tls/server.crt
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  TwoOrgsOrdererGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities:
+        <<: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *ManufacturerOrg
+        - *TransporterOrg
+      Capabilities:
+        <<: *ApplicationCapabilities

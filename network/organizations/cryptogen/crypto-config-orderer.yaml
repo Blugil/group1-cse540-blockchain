@@ -1,0 +1,10 @@
+# Cryptogen configuration for OrdererOrg
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: shipment.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - localhost

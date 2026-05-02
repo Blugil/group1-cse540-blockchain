@@ -1,0 +1,200 @@
+# Hyperledger Fabric Test Network for Shipment Tracking
+# This docker-compose file defines 5 organizations (one per stakeholder role),
+# an orderer, and CouchDB state databases.
+#
+# Organizations:
+#   - ManufacturerOrg (Org1) — Creates shipments
+#   - TransporterOrg  (Org2) — Moves shipments between locations
+#   - WarehouseOrg    (Org3) — Stores shipments in warehouse
+#   - RetailerOrg     (Org4) — Receives shipments for retail
+#   - RecipientOrg    (Org5) — Final delivery recipient
+
+version: '3.7'
+
+volumes:
+  orderer.shipment.com:
+  peer0.manufacturer.shipment.com:
+  peer0.transporter.shipment.com:
+
+networks:
+  shipment:
+    name: shipment_network
+
+services:
+  # ============================================================
+  # Orderer
+  # ============================================================
+  orderer.shipment.com:
+    container_name: orderer.shipment.com
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
+    working_dir: /root
+    command: orderer
+    volumes:
+      - ../organizations/ordererOrganizations/shipment.com/orderers/orderer.shipment.com/msp:/var/hyperledger/orderer/msp
+      - ../organizations/ordererOrganizations/shipment.com/orderers/orderer.shipment.com/tls:/var/hyperledger/orderer/tls
+      - orderer.shipment.com:/var/hyperledger/production/orderer
+    ports:
+      - 7050:7050
+      - 7053:7053
+    networks:
+      - shipment
+
+  # ============================================================
+  # Manufacturer Peer (Org1)
+  # ============================================================
+  couchdb0:
+    container_name: couchdb0
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "5984:5984"
+    networks:
+      - shipment
+
+  peer0.manufacturer.shipment.com:
+    container_name: peer0.manufacturer.shipment.com
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.manufacturer.shipment.com
+      - CORE_PEER_ADDRESS=peer0.manufacturer.shipment.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.manufacturer.shipment.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.manufacturer.shipment.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.manufacturer.shipment.com:7051
+      - CORE_PEER_LOCALMSPID=ManufacturerMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.manufacturer.shipment.com:9444
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0manufacturer"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+    volumes:
+      - ../organizations/peerOrganizations/manufacturer.shipment.com/peers/peer0.manufacturer.shipment.com:/etc/hyperledger/fabric
+      - peer0.manufacturer.shipment.com:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 7051:7051
+      - 9444:9444
+    depends_on:
+      - couchdb0
+    networks:
+      - shipment
+
+  # ============================================================
+  # Transporter Peer (Org2)
+  # ============================================================
+  couchdb1:
+    container_name: couchdb1
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "7984:5984"
+    networks:
+      - shipment
+
+  peer0.transporter.shipment.com:
+    container_name: peer0.transporter.shipment.com
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.transporter.shipment.com
+      - CORE_PEER_ADDRESS=peer0.transporter.shipment.com:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.transporter.shipment.com:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.transporter.shipment.com:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.transporter.shipment.com:9051
+      - CORE_PEER_LOCALMSPID=TransporterMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.transporter.shipment.com:9445
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0transporter"}
+      - CORE_CHAINCODE_EXECUTETIMEOUT=300s
+    volumes:
+      - ../organizations/peerOrganizations/transporter.shipment.com/peers/peer0.transporter.shipment.com:/etc/hyperledger/fabric
+      - peer0.transporter.shipment.com:/var/hyperledger/production
+    working_dir: /root
+    command: peer node start
+    ports:
+      - 9051:9051
+      - 9445:9445
+    depends_on:
+      - couchdb1
+    networks:
+      - shipment
+
+  # ============================================================
+  # CLI for chaincode management
+  # ============================================================
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:2.5
+    tty: true
+    stdin_open: true
+    environment:
+      - GOPATH=/opt/gopath
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.manufacturer.shipment.com:7051
+      - CORE_PEER_LOCALMSPID=ManufacturerMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/manufacturer.shipment.com/peers/peer0.manufacturer.shipment.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/manufacturer.shipment.com/peers/peer0.manufacturer.shipment.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/manufacturer.shipment.com/peers/peer0.manufacturer.shipment.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/manufacturer.shipment.com/users/Admin@manufacturer.shipment.com/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash
+    volumes:
+      - ../organizations:/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations
+      - ../chaincode:/opt/gopath/src/github.com/hyperledger/fabric/peer/chaincode
+      - ../scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts
+    depends_on:
+      - peer0.manufacturer.shipment.com
+      - peer0.transporter.shipment.com
+    networks:
+      - shipment
