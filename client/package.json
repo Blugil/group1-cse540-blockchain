@@ -5,10 +5,7 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "enroll-admin": "node src/enrollAdmin.js",
-    "register-user": "node src/registerUser.js",
-    "import-crypto": "node src/importCryptoIdentity.js",
-    "test-workflow": "node src/testWorkflow.js"
+    "import-crypto": "node src/importCryptoIdentity.js"
   },
   "keywords": [
     "hyperledger",
