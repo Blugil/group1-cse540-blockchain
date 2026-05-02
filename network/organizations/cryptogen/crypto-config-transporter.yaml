@@ -1,0 +1,13 @@
+# Cryptogen configuration for TransporterOrg (Org2)
+# Represents the transporter stakeholder in the supply chain
+
+PeerOrgs:
+  - Name: transporter
+    Domain: transporter.shipment.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+    Users:
+      Count: 1
