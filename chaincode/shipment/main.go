@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -14,6 +13,10 @@ import (
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
+	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+)
+
+// ShipmentContract provides functions for managing shipments on the blockchain
 type ShipmentContract struct {
 	contractapi.Contract
 }

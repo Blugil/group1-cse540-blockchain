@@ -41,10 +41,3 @@ client/connection-manufacturer.json
 
 # ── Logs ──────────────────────────────────────────────────────
 *.log
-
-REPORT.pdf
-REPORT.aux
-REPORT.out
-REPORT.log
-compile1.log
-client/wallet/
