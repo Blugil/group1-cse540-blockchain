@@ -6,7 +6,7 @@
 CHANNEL_NAME=${1:-"shipchannel"}
 CC_NAME=${2:-"shipment"}
 CC_SRC_PATH=${3:-"../chaincode/shipment"}
-CC_LANGUAGE=${4:-"go"}
+CC_LANGUAGE=${4:-"golang"}
 CC_VERSION=${5:-"1.0"}
 CC_SEQUENCE=${6:-1}
 CC_INIT_FCN=${7:-"InitLedger"}

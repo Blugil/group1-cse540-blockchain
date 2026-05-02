@@ -25,14 +25,11 @@ const CHAINCODE_NAME = 'shipment';
 // Connection profile path
 // ============================================================
 const ccpPath = path.resolve(
-  __dirname,
-  '..',
-  '..',
-  'network',
+  '/Users/anushreebhure/fabric-install/fabric-samples/test-network',
   'organizations',
   'peerOrganizations',
-  'manufacturer.shipment.com',
-  'connection-manufacturer.json'
+  'org1.example.com',
+  'connection-org1.json'
 );
 
 // ============================================================

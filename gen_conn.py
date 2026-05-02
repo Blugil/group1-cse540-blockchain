@@ -1,14 +1,16 @@
 import json
+import os
 
-ndir = "/Users/shashikantnanda/Documents/CSE 540_BlockChain/group1-cse540-blockchain/network"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+ndir = os.path.join(script_dir, "network")
 
-with open(f"{ndir}/organizations/peerOrganizations/manufacturer.shipment.com/peers/peer0.manufacturer.shipment.com/tls/ca.crt") as f:
+with open(os.path.join(ndir, "organizations/peerOrganizations/manufacturer.shipment.com/peers/peer0.manufacturer.shipment.com/tls/ca.crt")) as f:
     mfr_tls = f.read().strip()
 
-with open(f"{ndir}/organizations/ordererOrganizations/shipment.com/orderers/orderer.shipment.com/tls/ca.crt") as f:
+with open(os.path.join(ndir, "organizations/ordererOrganizations/shipment.com/orderers/orderer.shipment.com/tls/ca.crt")) as f:
     ord_tls = f.read().strip()
 
-with open(f"{ndir}/organizations/peerOrganizations/manufacturer.shipment.com/ca/ca.manufacturer.shipment.com-cert.pem") as f:
+with open(os.path.join(ndir, "organizations/peerOrganizations/manufacturer.shipment.com/ca/ca.manufacturer.shipment.com-cert.pem")) as f:
     mfr_ca = f.read().strip()
 
 conn = {
@@ -52,7 +54,7 @@ conn = {
   }
 }
 
-out = "/Users/shashikantnanda/Documents/CSE 540_BlockChain/group1-cse540-blockchain/client/connection-manufacturer.json"
+out = os.path.join(script_dir, "client", "connection-manufacturer.json")
 with open(out, "w") as f:
     json.dump(conn, f, indent=2)
 
