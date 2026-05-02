@@ -1,4 +1,3 @@
-// @authors: Dominick Agnello, Ritish Abrol, Vatsal Patel, Shashikant Nanda, Anushree Bhure
 
 package main
 
@@ -8,8 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -18,25 +19,25 @@ type ShipmentContract struct {
 }
 
 type Shipment struct {
-	DocType       string   `json:"docType"`       
-	ShipmentID    string   `json:"shipmentID"`    
-	Status        string   `json:"status"`        
-	Origin        string   `json:"origin"`        
-	Destination   string   `json:"destination"`   
-	CurrentHolder string   `json:"currentHolder"` 
-	Participants  []string `json:"participants"`  
-	DataHash      string   `json:"dataHash"`      
-	CreatedAt     string   `json:"createdAt"`     
-	UpdatedAt     string   `json:"updatedAt"`     
+	DocType       string   `json:"docType"`       // "shipment" — used for CouchDB rich queries
+	ShipmentID    string   `json:"shipmentID"`
+	Status        string   `json:"status"`
+	Origin        string   `json:"origin"`
+	Destination   string   `json:"destination"`
+	CurrentHolder string   `json:"currentHolder"`
+	Participants  []string `json:"participants"`
+	DataHash      string   `json:"dataHash"`
+	CreatedAt     string   `json:"createdAt"`
+	UpdatedAt     string   `json:"updatedAt"`
 }
 
 type ShipmentEvent struct {
-	DocType   string `json:"docType"`   
-	EventType string `json:"eventType"` 
-	Actor     string `json:"actor"`     
-	Location  string `json:"location"`  
-	Timestamp string `json:"timestamp"` 
-	Notes     string `json:"notes"`     
+	DocType   string `json:"docType"`   // "shipmentEvent"
+	EventType string `json:"eventType"`
+	Actor     string `json:"actor"`
+	Location  string `json:"location"`
+	Timestamp string `json:"timestamp"`
+	Notes     string `json:"notes"`
 }
 
 func (s *ShipmentContract) shipmentExists(ctx contractapi.TransactionContextInterface, shipmentID string) (bool, error) {
@@ -508,7 +509,6 @@ func (s *ShipmentContract) GetAllShipments(ctx contractapi.TransactionContextInt
 		var shipment Shipment
 		err = json.Unmarshal(queryResponse.Value, &shipment)
 		if err != nil {
-			// Skip non-shipment entries (e.g., events)
 			continue
 		}
 		if shipment.DocType == "shipment" {
@@ -518,7 +518,6 @@ func (s *ShipmentContract) GetAllShipments(ctx contractapi.TransactionContextInt
 
 	return shipments, nil
 }
-
 
 func (s *ShipmentContract) getShipmentInternal(ctx contractapi.TransactionContextInterface, shipmentID string) (*Shipment, error) {
 	shipmentJSON, err := ctx.GetStub().GetState(shipmentID)
@@ -551,14 +550,26 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-
 func main() {
 	chaincode, err := contractapi.NewChaincode(&ShipmentContract{})
 	if err != nil {
 		log.Fatalf("Error creating shipment chaincode: %v", err)
 	}
 
-	if err := chaincode.Start(); err != nil {
-		log.Fatalf("Error starting shipment chaincode: %v", err)
+	serverAddr := os.Getenv("CORE_CHAINCODE_SERVER_ADDRESS")
+	if serverAddr != "" {
+		server := &shim.ChaincodeServer{
+			CCID:    os.Getenv("CORE_CHAINCODE_ID"),
+			Address: serverAddr,
+			CC:      chaincode,
+			TLSProps: shim.TLSProperties{Disabled: true},
+		}
+		if err := server.Start(); err != nil {
+			log.Fatalf("Error starting chaincode server: %v", err)
+		}
+	} else {
+		if err := chaincode.Start(); err != nil {
+			log.Fatalf("Error starting shipment chaincode: %v", err)
+		}
 	}
 }

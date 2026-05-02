@@ -1,8 +1,25 @@
+#!/bin/bash
+#
 # Shipment Tracking Network Control Script
+# ==========================================
+# This script manages the Hyperledger Fabric test network for the
+# Blockchain-Based Shipment Tracking System.
+#
+# Usage:
+#   ./network.sh up                          - Start the network
+#   ./network.sh up createChannel -c <name>  - Start network and create channel
+#   ./network.sh up createChannel -ca        - Start with CA
+#   ./network.sh createChannel -c <name>     - Create a channel on running network
+#   ./network.sh deployCC -c <ch> -ccn <name> -ccp <path> -ccl go
+#   ./network.sh down                        - Tear down the network
+#
 # CSE 540 – Spring B 2026 | Group 1
 
 set -e
 
+# ============================================================
+# Configuration
+# ============================================================
 export PATH=${PWD}/../bin:$PATH
 export FABRIC_CFG_PATH=${PWD}/configtx
 export VERBOSE=false
@@ -10,7 +27,7 @@ export VERBOSE=false
 CHANNEL_NAME="shipchannel"
 CC_NAME="shipment"
 CC_SRC_PATH="../chaincode/shipment"
-CC_LANGUAGE="go"
+CC_LANGUAGE="golang"
 CC_VERSION="1.0"
 CC_SEQUENCE=1
 CC_INIT_FCN="InitLedger"
@@ -21,6 +38,9 @@ MAX_RETRY=5
 COMPOSE_FILE_BASE="docker/docker-compose-test-net.yaml"
 COMPOSE_FILE_CA="docker/docker-compose-ca.yaml"
 
+# ============================================================
+# Print helpers
+# ============================================================
 C_RESET='\033[0m'
 C_RED='\033[0;31m'
 C_GREEN='\033[0;32m'
@@ -34,17 +54,23 @@ warnln() { println "${C_YELLOW}[WARN]${C_RESET} $1"; }
 errorln() { println "${C_RED}[ERROR]${C_RESET} $1"; }
 fatalln() { errorln "$1"; exit 1; }
 
+# ============================================================
+# Verify prerequisites
+# ============================================================
 verifyPrereqs() {
   infoln "Verifying prerequisites..."
 
+  # Check Docker
   if ! command -v docker &> /dev/null; then
     fatalln "Docker is not installed. Please install Docker first."
   fi
 
+  # Check Docker Compose
   if ! command -v docker compose &> /dev/null && ! command -v docker-compose &> /dev/null; then
     fatalln "Docker Compose is not installed."
   fi
 
+  # Check Fabric binaries
   local FABRIC_TOOLS=("peer" "osnadmin" "configtxgen" "cryptogen")
   for tool in "${FABRIC_TOOLS[@]}"; do
     if ! command -v "$tool" &> /dev/null; then
@@ -55,6 +81,9 @@ verifyPrereqs() {
   successln "Prerequisites verified."
 }
 
+# ============================================================
+# Generate crypto material using cryptogen
+# ============================================================
 createOrgs() {
   infoln "Generating crypto material..."
 
@@ -63,6 +92,7 @@ createOrgs() {
     rm -rf organizations/ordererOrganizations
   fi
 
+  # Generate crypto material
   cryptogen generate --config=./organizations/cryptogen/crypto-config-manufacturer.yaml --output="organizations"
   if [ $? -ne 0 ]; then
     fatalln "Failed to generate crypto material for ManufacturerOrg"
@@ -81,6 +111,9 @@ createOrgs() {
   successln "Crypto material generated."
 }
 
+# ============================================================
+# Create channel
+# ============================================================
 createChannel() {
   infoln "Creating channel '${CHANNEL_NAME}'..."
 
@@ -92,6 +125,9 @@ createChannel() {
   successln "Channel '${CHANNEL_NAME}' created successfully."
 }
 
+# ============================================================
+# Deploy chaincode
+# ============================================================
 deployCC() {
   infoln "Deploying chaincode '${CC_NAME}' to channel '${CHANNEL_NAME}'..."
 
@@ -104,9 +140,13 @@ deployCC() {
   successln "Chaincode '${CC_NAME}' deployed successfully."
 }
 
+# ============================================================
+# Start the network
+# ============================================================
 networkUp() {
   infoln "Starting Shipment Tracking Network..."
 
+  # Generate crypto material if it doesn't exist
   if [ ! -d "organizations/peerOrganizations" ]; then
     createOrgs
   fi
@@ -119,6 +159,7 @@ networkUp() {
 
   docker compose ${COMPOSE_FILES} up -d 2>&1
 
+  # Wait for containers to be healthy
   sleep 5
 
   docker ps -a
@@ -129,24 +170,33 @@ networkUp() {
   successln "Network started successfully."
 }
 
+# ============================================================
+# Tear down the network
+# ============================================================
 networkDown() {
   infoln "Stopping Shipment Tracking Network..."
 
   COMPOSE_FILES="-f ${COMPOSE_FILE_BASE} -f ${COMPOSE_FILE_CA}"
   docker compose ${COMPOSE_FILES} down --volumes --remove-orphans 2>&1 || true
 
+  # Clean up crypto material and channel artifacts
   if [ -d "organizations/peerOrganizations" ]; then
     rm -rf organizations/peerOrganizations
     rm -rf organizations/ordererOrganizations
   fi
 
+  # Remove channel artifacts
   rm -rf channel-artifacts
 
+  # Remove chaincode packaging artifacts
   rm -rf *.tar.gz
 
   successln "Network stopped and cleaned up."
 }
 
+# ============================================================
+# Parse command-line arguments
+# ============================================================
 USE_CA=false
 MODE=""
 SUBCOMMAND=""
@@ -209,6 +259,9 @@ while [[ $# -ge 1 ]]; do
   esac
 done
 
+# ============================================================
+# Execute
+# ============================================================
 println ""
 println "  ____  _   _ ___ ____  __  __ _____ _   _ _____"
 println " / ___|| | | |_ _|  _ \\|  \\/  | ____| \\ | |_   _|"

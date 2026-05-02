@@ -1,3 +1,10 @@
+/*
+ * Enroll Admin User
+ * =================
+ * Enrolls the admin user with the Fabric CA and stores
+ * the credentials in the local wallet.
+ */
+
 'use strict';
 
 const FabricCAServices = require('fabric-ca-client');
@@ -7,6 +14,7 @@ const path = require('path');
 
 async function main() {
   try {
+    // Load connection profile
     const ccpPath = path.resolve(
       __dirname,
       '..',
@@ -19,6 +27,7 @@ async function main() {
     );
     const ccp = JSON.parse(fs.readFileSync(ccpPath, 'utf8'));
 
+    // Create CA client
     const caInfo = ccp.certificateAuthorities['ca.manufacturer.shipment.com'];
     const caTLSCACerts = caInfo.tlsCACerts.pem;
     const ca = new FabricCAServices(
@@ -27,16 +36,19 @@ async function main() {
       caInfo.caName
     );
 
+    // Create wallet
     const walletPath = path.join(__dirname, '..', 'wallet');
     const wallet = await Wallets.newFileSystemWallet(walletPath);
     console.log(`Wallet path: ${walletPath}`);
 
+    // Check if admin already enrolled
     const identity = await wallet.get('admin');
     if (identity) {
       console.log('Admin user already exists in the wallet');
       return;
     }
 
+    // Enroll admin
     const enrollment = await ca.enroll({
       enrollmentID: 'admin',
       enrollmentSecret: 'adminpw',

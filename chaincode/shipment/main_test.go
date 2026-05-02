@@ -1,3 +1,4 @@
+
 package main
 
 import (
@@ -35,17 +36,17 @@ func setupMockStub(t *testing.T) *shimtest.MockStub {
 
 func setMockCreator(t *testing.T, stub *shimtest.MockStub, mspID string) {
 	certPEM := generateSelfSignedCert(t)
-	
+
 	sid := &mspproto.SerializedIdentity{
 		Mspid:   mspID,
 		IdBytes: certPEM,
 	}
-	
+
 	serialized, err := proto.Marshal(sid)
 	if err != nil {
 		t.Fatalf("Failed to marshal serialized identity: %v", err)
 	}
-	
+
 	stub.Creator = serialized
 }
 
@@ -70,7 +71,6 @@ func generateSelfSignedCert(t *testing.T) []byte {
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 }
 
-// Test 1: InitLedger
 func TestInitLedger(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -114,7 +114,6 @@ func TestInitLedger(t *testing.T) {
 		shipment.ShipmentID, shipment.Status, shipment.CurrentHolder)
 }
 
-// Test 2: CreateShipment
 func TestCreateShipment(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -161,7 +160,6 @@ func TestCreateShipment(t *testing.T) {
 	t.Logf("✅ Shipment created: ID=%s, Hash=%s", shipment.ShipmentID, shipment.DataHash)
 }
 
-// Test 3: CreateShipment — duplicate should fail
 func TestCreateShipmentDuplicate(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -187,7 +185,6 @@ func TestCreateShipmentDuplicate(t *testing.T) {
 	t.Logf("✅ Duplicate shipment correctly rejected: %s", result.Message)
 }
 
-// Test 4: UpdateShipmentStatus
 func TestUpdateShipmentStatus(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -222,7 +219,6 @@ func TestUpdateShipmentStatus(t *testing.T) {
 	t.Logf("✅ Status updated to: %s", shipment.Status)
 }
 
-// Test 5: UpdateShipmentStatus — invalid status should fail
 func TestUpdateShipmentStatusInvalid(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -250,7 +246,6 @@ func TestUpdateShipmentStatusInvalid(t *testing.T) {
 	t.Logf("✅ Invalid status correctly rejected: %s", result.Message)
 }
 
-// Test 6: TransferCustody
 func TestTransferCustody(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -286,7 +281,6 @@ func TestTransferCustody(t *testing.T) {
 	t.Logf("✅ Custody transferred: Holder=%s, Status=%s", shipment.CurrentHolder, shipment.Status)
 }
 
-// Test 7: TransferCustody — unauthorized participant should fail
 func TestTransferCustodyUnauthorized(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -312,7 +306,6 @@ func TestTransferCustodyUnauthorized(t *testing.T) {
 	t.Logf("✅ Unauthorized transfer correctly rejected: %s", result.Message)
 }
 
-// Test 8: VerifyShipment — matching data
 func TestVerifyShipmentValid(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -340,7 +333,6 @@ func TestVerifyShipmentValid(t *testing.T) {
 	t.Log("✅ Shipment data integrity verified (matching hash)")
 }
 
-// Test 9: VerifyShipment — mismatched data should fail
 func TestVerifyShipmentInvalid(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -370,7 +362,6 @@ func TestVerifyShipmentInvalid(t *testing.T) {
 	t.Log("✅ Tampered data correctly detected (hash mismatch)")
 }
 
-// Test 10: AuthorizeParticipant
 func TestAuthorizeParticipant(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -410,7 +401,6 @@ func TestAuthorizeParticipant(t *testing.T) {
 	t.Logf("✅ Participant authorized: Participants=%v", shipment.Participants)
 }
 
-// Test 11: RevokeParticipant
 func TestRevokeParticipant(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -445,13 +435,11 @@ func TestRevokeParticipant(t *testing.T) {
 	t.Logf("✅ Participant revoked: Participants=%v", shipment.Participants)
 }
 
-// Test 12: Full Lifecycle — end-to-end workflow
 func TestFullLifecycle(t *testing.T) {
 	stub := setupMockStub(t)
 
 	t.Log("--- Full Lifecycle Test ---")
 
-	// Step 1: Create shipment
 	result := stub.MockInvoke("tx1", [][]byte{
 		[]byte("CreateShipment"),
 		[]byte("SHIP-LIFECYCLE"),
@@ -465,7 +453,6 @@ func TestFullLifecycle(t *testing.T) {
 	}
 	t.Log("  Step 1: ✅ Shipment created")
 
-	// Step 2: Update status to InTransit
 	result = stub.MockInvoke("tx2", [][]byte{
 		[]byte("UpdateShipmentStatus"),
 		[]byte("SHIP-LIFECYCLE"),
@@ -478,7 +465,6 @@ func TestFullLifecycle(t *testing.T) {
 	}
 	t.Log("  Step 2: ✅ Status updated to InTransit")
 
-	// Step 3: Transfer to transporter
 	result = stub.MockInvoke("tx3", [][]byte{
 		[]byte("TransferCustody"),
 		[]byte("SHIP-LIFECYCLE"),
@@ -489,7 +475,6 @@ func TestFullLifecycle(t *testing.T) {
 	}
 	t.Log("  Step 3: ✅ Custody transferred to TransporterMSP")
 
-	// Step 4: Verify data integrity
 	result = stub.MockInvoke("tx4", [][]byte{
 		[]byte("VerifyShipment"),
 		[]byte("SHIP-LIFECYCLE"),
@@ -500,7 +485,6 @@ func TestFullLifecycle(t *testing.T) {
 	}
 	t.Log("  Step 4: ✅ Data integrity verified")
 
-	// Step 5: Check final state
 	var shipment Shipment
 	json.Unmarshal(stub.State["SHIP-LIFECYCLE"], &shipment)
 
@@ -515,7 +499,6 @@ func TestFullLifecycle(t *testing.T) {
 	t.Log("--- Full Lifecycle Test Complete ---")
 }
 
-// Test 13: Delivered shipment cannot be updated
 func TestDeliveredCannotBeUpdated(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -551,7 +534,6 @@ func TestDeliveredCannotBeUpdated(t *testing.T) {
 	t.Logf("✅ Delivered shipment correctly locked: %s", result.Message)
 }
 
-// Test 14: GetAllShipments
 func TestGetAllShipments(t *testing.T) {
 	stub := setupMockStub(t)
 
@@ -576,7 +558,6 @@ func TestGetAllShipments(t *testing.T) {
 	t.Logf("✅ All 3 shipments exist on ledger")
 }
 
-// Test 15: Data hash computation
 func TestComputeHash(t *testing.T) {
 	data := "weight:25kg,volume:1cbm"
 	hash1 := computeHash(data)

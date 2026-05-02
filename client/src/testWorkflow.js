@@ -1,5 +1,19 @@
- //Test Workflow Script: Demonstrates the full shipment lifecycle by invoking chaincode functions in sequence via the Fabric SDK.
-
+/*
+ * Test Workflow Script
+ * ====================
+ * Demonstrates the full shipment lifecycle by invoking
+ * chaincode functions in sequence via the Fabric SDK.
+ *
+ * Workflow:
+ *   1. Initialize the ledger
+ *   2. Query the sample shipment (SHIP-001)
+ *   3. Create a new shipment (SHIP-TEST-001)
+ *   4. Update shipment status to InTransit
+ *   5. Transfer custody to TransporterMSP
+ *   6. Verify shipment data integrity
+ *   7. Query shipment history
+ *   8. Get all shipments
+ */
 
 'use strict';
 
@@ -52,12 +66,12 @@ async function main() {
     console.log('  Shipment Tracking — Test Workflow');
     console.log('========================================\n');
 
-    // Step 1: Query sample shipment
+    // ---- Step 1: Query sample shipment ----
     console.log('--- Step 1: Query Sample Shipment (SHIP-001) ---');
     let result = await contract.evaluateTransaction('GetShipment', 'SHIP-001');
     console.log(`Result: ${prettyJSON(result)}\n`);
 
-    // Step 2: Create a new shipment
+    // ---- Step 2: Create a new shipment ----
     console.log('--- Step 2: Create New Shipment (SHIP-TEST-001) ---');
     const participants = JSON.stringify([
       'ManufacturerMSP',
@@ -77,12 +91,12 @@ async function main() {
     );
     console.log('Shipment SHIP-TEST-001 created.\n');
 
-    // Step 3: Query the new shipment
+    // ---- Step 3: Query the new shipment ----
     console.log('--- Step 3: Query New Shipment ---');
     result = await contract.evaluateTransaction('GetShipment', 'SHIP-TEST-001');
     console.log(`Result: ${prettyJSON(result)}\n`);
 
-    // Step 4: Update status
+    // ---- Step 4: Update status ----
     console.log('--- Step 4: Update Status to InTransit ---');
     await contract.submitTransaction(
       'UpdateShipmentStatus',
@@ -93,27 +107,27 @@ async function main() {
     );
     console.log('Status updated.\n');
 
-    // Step 5: Transfer custody 
+    // ---- Step 5: Transfer custody ----
     console.log('--- Step 5: Transfer Custody to TransporterMSP ---');
     await contract.submitTransaction('TransferCustody', 'SHIP-TEST-001', 'TransporterMSP');
     console.log('Custody transferred.\n');
 
-    // Step 6: Query updated shipment 
+    // ---- Step 6: Query updated shipment ----
     console.log('--- Step 6: Query Updated Shipment ---');
     result = await contract.evaluateTransaction('GetShipment', 'SHIP-TEST-001');
     console.log(`Result: ${prettyJSON(result)}\n`);
 
-    // Step 7: Verify shipment integrity 
+    // ---- Step 7: Verify shipment integrity ----
     console.log('--- Step 7: Verify Shipment Data Integrity ---');
     result = await contract.evaluateTransaction('VerifyShipment', 'SHIP-TEST-001', offChainData);
     console.log(`Verified: ${result.toString()}\n`);
 
-    // Step 8: Get shipment history
+    // ---- Step 8: Get shipment history ----
     console.log('--- Step 8: Get Shipment History ---');
     result = await contract.evaluateTransaction('GetShipmentHistory', 'SHIP-TEST-001');
     console.log(`History: ${prettyJSON(result)}\n`);
 
-    // Step 9: Get all shipments 
+    // ---- Step 9: Get all shipments ----
     console.log('--- Step 9: Get All Shipments ---');
     result = await contract.evaluateTransaction('GetAllShipments');
     console.log(`All Shipments: ${prettyJSON(result)}\n`);
