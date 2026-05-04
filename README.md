@@ -127,6 +127,7 @@ group1-cse540-blockchain/
 curl -sSL https://bit.ly/2ysbOFE | bash -s -- 2.5.0 1.5.7
 export PATH=$PATH:$PWD/fabric-samples/bin
 export FABRIC_CFG_PATH=$PWD/fabric-samples/config
+export FABRIC_SAMPLES_PATH=$PWD/fabric-samples
 ```
 
 ### Step 2: Clone This Repository
