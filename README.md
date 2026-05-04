@@ -136,8 +136,15 @@ export FABRIC_SAMPLES_PATH=$PWD/fabric-samples
 git clone https://github.com/Blugil/group1-cse540-blockchain.git
 cd group1-cse540-blockchain
 ```
+### Step 3: Vendor the chaincode
 
-### Step 3: Start Everything
+```bash
+cd group1-cse540-blockchain/chaincode/shipment
+go mod tidy
+go mod vendor
+```
+
+### Step 4: Start Everything
 
 ```bash
 # From the project root — starts the network, deploys chaincode, and launches the API
